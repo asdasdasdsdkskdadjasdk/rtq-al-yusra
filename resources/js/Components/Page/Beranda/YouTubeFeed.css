@@ -1,0 +1,264 @@
+/* File: YouTubeFeed.css (DIUPDATE DENGAN ANIMASI) */
+
+/* 1. KEYFRAME UNTUK ANIMASI LOAD-IN */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(15px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.youtube-feed-list {
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 0 15px;
+    font-family: 'Roboto', 'Arial', sans-serif;
+}
+
+.feed-title {
+    font-size: 24px;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 30px;
+    color: #0f0f0f;
+}
+
+/* --- Daftar Video --- */
+.video-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.video-list-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    
+    /* 2. MENERAPKAN ANIMASI LOAD-IN */
+    animation: fadeInUp 0.5s ease-out forwards; /* 'forwards' menjaga state akhir */
+    opacity: 0; /* Mulai dari transparan */
+
+    /* Menjaga transisi hover tetap mulus */
+    transition: background-color 0.2s ease;
+}
+
+/* 3. MEMBUAT ANIMASI MUNCUL SATU PER SATU (STAGGERED) */
+.video-list-item:nth-child(1) {
+    animation-delay: 0.1s;
+}
+.video-list-item:nth-child(2) {
+    animation-delay: 0.2s;
+}
+.video-list-item:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+
+/* --- Thumbnail Kiri --- */
+.video-thumbnail-container {
+    position: relative;
+    flex-shrink: 0;
+    width: 246px;
+    height: 138px;
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: #f0f0f0;
+}
+
+.video-thumbnail-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    
+    /* 4. ANIMASI HOVER PADA THUMBNAIL (ZOOM) */
+    transition: transform 0.3s ease-out;
+}
+
+/* 5. EFEK SAAT THUMBNAIL DI-HOVER */
+.video-list-item:hover .video-thumbnail-img {
+    transform: scale(1.05); /* Zoom in 5% */
+}
+
+.video-duration {
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    background-color: rgba(0, 0, 0, 0.85);
+    color: white;
+    padding: 3px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* --- Detail Video Kanan --- */
+.video-details {
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.video-title-link {
+    text-decoration: none;
+}
+
+.video-title {
+    font-size: 18px;
+    font-weight: 500;
+    color: #0f0f0f;
+    line-height: 1.4;
+    margin: 0 0 6px 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;  
+    overflow: hidden;
+    text-overflow: ellipsis;
+    
+    /* 6. ANIMASI HOVER PADA JUDUL (GANTI WARNA) */
+    transition: color 0.2s ease;
+}
+
+/* 7. EFEK SAAT JUDUL DI-HOVER */
+.video-title-link:hover .video-title {
+    color: #cc0000; /* Warna merah YouTube */
+}
+
+.video-meta {
+    font-size: 13px;
+    color: #606060;
+}
+
+.video-channel,
+.video-stats {
+    display: block;
+    line-height: 1.5;
+}
+
+.video-stats {
+    margin-top: 2px;
+}
+
+.new-badge {
+    background-color: #f0f0f0;
+    color: #606060;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    margin-left: 8px;
+}
+
+/* --- Ikon Tiga Titik --- */
+.video-menu-icon {
+    color: #606060;
+    font-size: 24px;
+    cursor: pointer;
+    align-self: flex-start;
+    margin-left: auto;
+    
+    /* 8. PERSIAPAN ANIMASI HOVER TOMBOL MENU (BACKGROUND BULAT) */
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%; /* Membuatnya bulat */
+    transition: background-color 0.2s ease;
+}
+
+/* 9. EFEK SAAT TOMBOL MENU DI-HOVER */
+.video-menu-icon:hover {
+    background-color: #f0f0f0; /* Warna background abu-abu */
+}
+
+/* --- Tombol 'Lebih Banyak' --- */
+.more-videos-container {
+    text-align: center;
+    margin-top: 30px;
+    border-top: 1px solid #e0e0e0;
+    padding-top: 20px;
+}
+
+.more-videos-button {
+    display: inline-block;
+    background-color: #c00;
+    color: white;
+    padding: 10px 24px;
+    border-radius: 50px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 15px;
+    
+    /* 10. ANIMASI HOVER PADA TOMBOL (LEBIH MULUS) */
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.more-videos-button:hover {
+    background-color: #a00;
+    transform: scale(1.03); /* Sedikit membesar */
+}
+
+/* --- RESPONSIVE UNTUK HP --- */
+@media (max-width: 768px) {
+    .video-thumbnail-container {
+        width: 168px;
+        height: 94px;
+    }
+    .video-title {
+        font-size: 16px;
+    }
+    .video-meta {
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 576px) {
+    .video-list-item {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .video-thumbnail-container {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 16 / 9;
+    }
+
+    .video-details {
+        width: 100%;
+        position: relative;
+        padding-right: 30px;
+    }
+    
+    .video-menu-icon {
+        position: absolute;
+        top: -8px; /* Atur posisi agar pas */
+        right: 0;
+        align-self: auto;
+    }
+
+    .video-title {
+        font-size: 15px;
+        margin-bottom: 8px;
+    }
+
+    .video-channel,
+    .video-stats {
+        display: inline;
+    }
+    .video-stats::before {
+        content: " • ";
+        margin: 0 4px;
+    }
+    
+    .new-badge {
+        display: block;
+        margin-left: 0;
+        margin-top: 6px;
+        width: fit-content;
+    }
+}

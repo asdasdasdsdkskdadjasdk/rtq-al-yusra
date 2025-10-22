@@ -6,10 +6,14 @@ import Footer from "@/Components/Page/Footer";
 // Terima props 'auth'
 export default function AppLayout({ auth, children }) {
     return (
-        <div className="bg-gray-100 text-gray-800">
+        <div className="bg-gray-50 text-gray-800">
             {/* Teruskan props 'auth' ke Navbar */}
             <Navbar auth={auth} />
-            <main>{children}</main>
+
+            <main className="bg-dots-pattern bg-dots-size bg-repeat">
+                {children}
+            </main>
+
             <Footer />
         </div>
     );

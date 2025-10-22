@@ -1,8 +1,10 @@
 // resources/js/Components/Page/Beranda/InfoBoxes.jsx
 
 import { Link } from '@inertiajs/react';
+import { motion } from 'framer-motion'; 
+import { useInView } from 'react-intersection-observer'; 
 
-// === KOLEKSI IKON BARU YANG RELEVAN ===
+// === KOLEKSI IKON BARU YANG RELEVAN === (Tidak perlu diubah)
 const CekKelulusanIcon = ({ iconBgColor, iconColor }) => (
     <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-4 ${iconBgColor}`}>
         <svg className={`w-5 h-5 ${iconColor}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -42,10 +44,9 @@ const ChevronRightIcon = ({ textColor }) => (
 );
 
 
-// --- KOMPONEN KARTU YANG DIDESAIN ULANG ---
-// Perubahan: Menerima 'icon' sebagai prop
+// --- KOMPONEN KARTU ---
 const InfoCard = ({ title, href, color, icon: IconComponent }) => {
-    // Menentukan warna berdasarkan props 'color'
+    // ... (kode styling InfoCard tetap sama)
     const bgColor = color === 'white' ? 'bg-white' : 'bg-alyusra-orange';
     const textColor = color === 'white' ? 'text-gray-800' : 'text-white';
     const iconBgColor = color === 'white' ? 'bg-black' : 'bg-white';
@@ -58,7 +59,6 @@ const InfoCard = ({ title, href, color, icon: IconComponent }) => {
             className={`flex items-center justify-between p-6 rounded-xl shadow-lg transform hover:-translate-y-1 transition-transform duration-300 ${bgColor} ${textColor}`}
         >
             <div className="flex items-center">
-                {/* Perubahan: Menampilkan ikon secara dinamis */}
                 <IconComponent iconBgColor={iconBgColor} iconColor={iconColor} />
                 <div>
                     <h3 className="font-bold text-lg">{title}</h3>
@@ -73,7 +73,7 @@ const InfoCard = ({ title, href, color, icon: IconComponent }) => {
 
 // --- KOMPONEN UTAMA ---
 export default function InfoBoxes() {
-    // Perubahan: Menambahkan properti 'icon' untuk setiap kartu
+    // ... (data cards tetap sama)
     const cards = [
         { title: 'Cek Kelulusan', href: route('kelulusan.index'), color: 'white', icon: CekKelulusanIcon },
         { title: 'Formulir Pendaftaran', href: route('pendaftaran'), color: 'orange', icon: FormulirIcon },
@@ -83,17 +83,77 @@ export default function InfoBoxes() {
         { title: 'Berita', href: route('berita.index'), color: 'orange', icon: BeritaIcon },
     ];
 
+    // Setup useInView (tetap sama)
+    const { ref, inView } = useInView({
+        triggerOnce: true,
+        threshold: 0.1, 
+    });
+
+    // Varian animasi (tetap sama)
+    const containerVariants = {
+        hidden: { opacity: 1 }, 
+        visible: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.15 
+            }
+        }
+    };
+    const cardVariants = {
+        hidden: { opacity: 0, y: 30 },
+        visible: { opacity: 1, y: 0 },
+    };
+
     return (
-        <section className="py-16 bg-gray-50">
+        // Gunakan background pattern yang sudah Anda buat di config
+        <section 
+            ref={ref} 
+            className="py-10 bg-dots-pattern bg-dots-size bg-repeat overflow-hidden bg-gray-50"
+        > 
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                
+                {/* --- JUDUL / KETERANGAN BARU DITAMBAHKAN DI SINI --- */}
+                <motion.div 
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={inView ? "visible" : "hidden"}
+                    variants={{ hidden: { opacity: 0, y: -20 }, visible: { opacity: 1, y: 0 } }}
+                    transition={{ duration: 0.6, ease: "easeOut" }}
+                    className="text-center mb-4" // Beri jarak bawah
+                >
+                    <h2 className="text-4x1 lg:text-4xl mx-auto px-16 sm:px-6 lg:px-8 font-extrabold text-alyusra-dark-blue leading-tight">
+                                                Informasi  proses pendaftaran
+                    </h2>
+
+                    <h2 className="text-4x1 lg:text-4xl mx-auto px-16 sm:px-6 lg:px-8 font-extrabold text-alyusra-dark-blue leading-tight">
+                                                santri baru RTQ Al-Yusra.
+                    </h2>
+
+<br />
+<hr />
+                </motion.div>
+                {/* --- AKHIR JUDUL --- */}
+
+
+                {/* Grid untuk kartu (tetap sama) */}
+                <motion.div 
+                    initial="hidden"
+                    animate={inView ? "visible" : "hidden"} 
+                    variants={containerVariants} 
+                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8"
+                >
                     {cards.map((card) => (
-                        <InfoCard 
-                            key={card.title} 
-                            {...card} // Menggunakan spread operator untuk mengirim semua properti
-                        />
+                        <motion.div 
+                            key={card.title}
+                            variants={cardVariants} 
+                            transition={{ duration: 0.5, ease: "easeOut" }}
+                        >
+                            <InfoCard {...card} />
+                        </motion.div>
                     ))}
-                </div>
+                </motion.div>
+
+<br />
+<hr />
             </div>
         </section>
     );
