@@ -1,42 +1,61 @@
 // resources/js/Components/Page/Biaya/BiayaCard.jsx
 
-import { Link } from '@inertiajs/react';
+import { Link } from '@inertiajs/react'; // Tambahkan Link jika digunakan di dalam Card
+import { motion } from 'framer-motion'; // <<< IMPORT FRAMER MOTION
 
-// Ikon checkmark
-const CheckIcon = () => (
-    <svg className="w-5 h-5 text-white flex-shrink-0 mr-3 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-    </svg>
-);
-
-export default function BiayaCard({ program }) {
-    // Tentukan kelas CSS berdasarkan data program
+// Asumsi BiayaCard menerima props 'program'
+// PERUBAHAN: Menerima prop 'style' untuk animationDelay
+export default function BiayaCard({ program, style = {} }) { 
     const isFeatured = program.featured;
-    const cardBaseClasses = "rounded-2xl shadow-lg p-8 text-white flex flex-col transition-all duration-300";
+    
+    // Kelas Dasar Card
+    const cardBaseClasses = "rounded-2xl shadow-lg p-8 text-white flex flex-col transition-all duration-300 h-full";
     const featuredClasses = isFeatured ? "transform lg:scale-110 z-20" : "z-10";
+    
+    // Gabungkan warna background kustom dengan prop style
+    const cardStyle = {
+        backgroundColor: program.color,
+        ...style // Menerapkan animationDelay dari luar
+    };
 
     return (
-        <div className={`${cardBaseClasses} ${featuredClasses}`} style={{ backgroundColor: program.color }}>
+        // Ganti div menjadi motion.div
+        <motion.div 
+            className={`${cardBaseClasses} ${featuredClasses}`}
+            style={cardStyle}
+            
+            // Animasi Staggered: Slide Up dan Fade In
+            initial={{ opacity: 0, y: 30 }} 
+            animate={{ opacity: 1, y: 0 }}  
+            transition={{ duration: 0.6, ease: "easeOut" }} 
+        >
             <div className="flex-grow">
                 <p className="font-semibold">{program.jenis}</p>
-                <h3 className="text-3xl font-extrabold mt-1 mb-6">{program.nama}</h3>
+                <h3 className="text-3xl font-extrabold mt-1 mb-4">{program.nama}</h3>
+                
+                <div className="border-t border-white/20 my-6"></div>
+                
+                <h4 className="font-bold text-xl mb-4">Rincian Biaya</h4>
 
-                {/* Rincian Biaya */}
-                <ul className="space-y-4 text-left">
+                <ul className="space-y-4">
                     {program.items.map((item, index) => (
-                        <li key={index} className="flex items-start">
-                            <CheckIcon />
-                            <div>
-                                <p>{item.label}</p>
-                                <p className="font-bold text-lg">{item.value}</p>
-                                {item.note && (
-                                    <p className="text-xs opacity-80 mt-1">{item.note}</p>
-                                )}
+                        <li key={index} className="pb-3 border-b border-white/10">
+                            <div className="flex justify-between items-center text-lg font-medium">
+                                <span>{item.label}</span>
+                                <span>{item.value}</span>
                             </div>
+                            {item.note && (
+                                <p className="text-xs opacity-70 mt-1">{item.note}</p>
+                            )}
                         </li>
                     ))}
                 </ul>
             </div>
-        </div>
+            
+            {/* Tombol pendaftaran/informasi (Asumsi Link Inertia jika ada) */}
+            <div className="mt-8">
+                 {/* Jika Anda memiliki tombol atau link, taruh di sini */}
+            </div>
+        </motion.div>
     );
 }

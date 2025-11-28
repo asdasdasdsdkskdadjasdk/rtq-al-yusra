@@ -49,7 +49,7 @@ export default function Login({ status, canResetPassword }) {
                         {/* 3. LOGO DIPINDAHKAN KE DALAM FORM */}
                         <div className="flex justify-center mb-6">
                             <Link href="/">
-                                <img src="/images/logo.png" alt="Logo RTQ Al Yusra" className="w-24 h-24" />
+                                <img src="/images/logo3.png" alt="Logo RTQ Al Yusra" className="w-24 h-24" />
                             </Link>
                         </div>
                         
@@ -108,7 +108,7 @@ export default function Login({ status, canResetPassword }) {
                     {/* Footer di Bawah Halaman */}
                     <footer className="text-center text-white text-sm mt-8 drop-shadow-md">
                         <p>Powered by RTQ Al-Yusra</p>
-                        <p>&copy; {new Date().getFullYear()} KANAGEM</p>
+                        <p>&copy; {new Date().getFullYear()} 1KANASEM</p>
                     </footer>
                 </div>
             </div>

@@ -1,22 +1,39 @@
 // resources/js/Components/Page/Pendaftaran/ProgramCard.jsx
 
 import { Link } from '@inertiajs/react';
+// Import motion dari Framer Motion
+import { motion } from 'framer-motion';
 
-// SVG Icon untuk checkmark
+// SVG Icon untuk checkmark (tetap sama)
 const CheckIcon = () => (
     <svg className="w-5 h-5 text-white flex-shrink-0 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
     </svg>
 );
 
-// PERUBAHAN: Menerima props 'auth' dan 'onRegisterClick'
-export default function ProgramCard({ program, auth, onRegisterClick }) {
+// PERBAIKAN UTAMA: HANYA menerima props 'auth', 'onRegisterClick', dan 'style'
+export default function ProgramCard({ program, auth, onRegisterClick, style = {} }) {
     const isFeatured = program.featured;
     const cardBaseClasses = "rounded-2xl shadow-lg p-8 text-white flex flex-col transition-all duration-300";
     const featuredClasses = isFeatured ? "transform lg:scale-110 z-20" : "z-10";
 
+    // Pastikan warna kartu diaplikasikan di sini
+    const cardStyle = {
+        backgroundColor: program.color,
+        ...style // Menggabungkan style (yaitu animationDelay)
+    };
+
     return (
-        <div className={`${cardBaseClasses} ${featuredClasses}`} style={{ backgroundColor: program.color }}>
+        // motion.div sekarang TIDAK menerima prop className dari luar, hanya style
+        <motion.div 
+            className={`${cardBaseClasses} ${featuredClasses}`} 
+            style={cardStyle} // Menggunakan objek style gabungan
+            
+            // Definisikan animasi Framer Motion
+            initial={{ opacity: 0, y: 30 }} // Posisi awal (lebih kecil dari 50 untuk lebih halus)
+            animate={{ opacity: 1, y: 0 }}  // Posisi akhir
+            transition={{ duration: 0.6, ease: "easeOut" }} // Durasi sedikit diperpanjang
+        >
             <div className="flex-grow">
                 <p className="font-semibold">{program.jenis}</p>
                 <h3 className="text-3xl font-extrabold mt-1 mb-4">{program.nama}</h3>
@@ -37,15 +54,12 @@ export default function ProgramCard({ program, auth, onRegisterClick }) {
             <div className="mt-8">
                 <p className="font-bold text-lg">Biaya : {program.biaya}</p>
                 
-                {/* PERUBAHAN UTAMA: Link sekarang memiliki onClick handler */}
                 <Link
-                    // Jika sudah login, href mengarah ke form. Jika tidak, tidak kemana-mana.
                     href={auth?.user ? route('formulir.create', { program_slug: program.slug }) : '#'}
-                    // onClick akan memeriksa status login sebelum navigasi
                     onClick={(e) => {
                         if (!auth?.user) {
-                            e.preventDefault(); // Mencegah link pindah halaman
-                            onRegisterClick();  // Memanggil fungsi untuk membuka modal
+                            e.preventDefault(); 
+                            onRegisterClick();  
                         }
                     }}
                     className="mt-4 block w-full text-center bg-white text-alyusra-dark-blue font-bold py-3 rounded-lg hover:bg-gray-200 transition"
@@ -53,6 +67,6 @@ export default function ProgramCard({ program, auth, onRegisterClick }) {
                     Daftar
                 </Link>
             </div>
-        </div>
+        </motion.div>
     );
 }

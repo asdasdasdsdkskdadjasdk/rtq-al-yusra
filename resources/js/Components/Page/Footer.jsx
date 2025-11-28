@@ -74,7 +74,7 @@ export default function Footer() {
                     style={{ backgroundImage: "url('/images/rtq.jpg')" }}
                 >
                     {/* Overlay gelap */}
-                    <div className="absolute inset-0 bg-alyusra-dark-blue/90"></div>
+                        <div className="absolute inset-0 bg-black/60"></div>
 
                     {/* Konten aktual footer di dalam overlay */}
                     <div className="relative p-8 md:p-12">
@@ -82,8 +82,8 @@ export default function Footer() {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12">
 
                             {/* Kolom 1: Logo, Alamat, Kontak */}
-                            <div className="space-y-4">
-                                <img src="/images/logo3.png" alt="Logo RTQ Al-Yusra" className="h-20 md:h-24 mb-4" />
+                            <div className="space-y-4 ">
+                                <img src="/images/logo3.png" alt="Logo RTQ Al-Yusra" className="h-20 md:h-24 mb-4 bg-white/10 p-4 rounded-lg" />
                                 <div className="flex items-start text-gray-300 text-sm">
                                     <LocationIcon className="w-4 h-4 mt-1 mr-3 flex-shrink-0 text-alyusra-orange" />
                                     <p>{alamat}</p>

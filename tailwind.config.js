@@ -97,6 +97,7 @@ export default {
 
             backgroundImage: {
                 'dots-pattern': "radial-gradient(circle, rgba(0,0,0,0.08) 1px, transparent 1px)", // Warna titik (abu-abu muda transparan), ukuran 1px
+
             },
             backgroundSize: {
                 'dots-size': '12px 12px', // Jarak antar titik (12px horizontal & vertikal)

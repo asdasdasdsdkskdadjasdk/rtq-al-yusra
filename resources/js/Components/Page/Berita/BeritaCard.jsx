@@ -2,7 +2,8 @@
 
 import { Link } from '@inertiajs/react';
 
-export default function BeritaCard({ post }) {
+// 1. Tambahkan className dan style ke props, dengan nilai default
+export default function BeritaCard({ post, className = '', style = {} }) {
     const isFeatured = post.featured;
 
     // Tentukan warna berdasarkan status 'featured'
@@ -11,7 +12,12 @@ export default function BeritaCard({ post }) {
     const buttonColor = isFeatured ? 'bg-white text-alyusra-orange' : 'bg-alyusra-orange text-white';
 
     return (
-        <div className={`rounded-xl shadow-lg overflow-hidden flex flex-col ${cardColor} ${isFeatured ? 'transform lg:scale-105' : ''}`}>
+        // 2. Terapkan className dan style ke elemen root div.
+        // Penataan jarak prop diperbaiki untuk menghindari error Babel.
+        <div 
+            className={`rounded-xl shadow-lg overflow-hidden flex flex-col ${cardColor} ${isFeatured ? 'transform lg:scale-105' : ''} ${className}`}
+            style={style} 
+        >
             {/* Gambar Artikel */}
             <img src={post.image} alt={post.title} className="w-full h-48 object-cover" />
 

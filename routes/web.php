@@ -8,6 +8,7 @@ use App\Http\Controllers\BeritaController;
 use App\Http\Controllers\KelulusanController;
 use App\Http\Controllers\FormulirController;
 use App\Http\Controllers\PsbController;
+use App\Http\Controllers\PageController; // Pastikan ini diimpor
 
 /*
 |--------------------------------------------------------------------------
@@ -40,6 +41,8 @@ Route::get('/biaya-pendidikan', function () {
 Route::get('/panduan-pendaftaran', function () {
     return Inertia::render('PanduanPendaftaran');
 })->name('panduan.pendaftaran');
+
+Route::get('/kontak', [PageController::class, 'kontak'])->name('kontak');
 
 Route::get('/berita', [BeritaController::class, 'index'])->name('berita.index');
 Route::get('/berita/{id}', [BeritaController::class, 'show'])->name('berita.show');

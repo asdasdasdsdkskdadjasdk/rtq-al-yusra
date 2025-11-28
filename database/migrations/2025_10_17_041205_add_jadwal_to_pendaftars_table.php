@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('pendaftars', function (Blueprint $table) {
+        Schema::table('pendaftar', function (Blueprint $table) {
             // Tambahkan kolom untuk jadwal ujian (bisa tanggal dan waktu)
             $table->dateTime('jadwal_ujian')->nullable()->after('status');
             // Tambahkan kolom untuk jadwal masuk (cukup tanggal)
@@ -18,7 +18,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('pendaftars', function (Blueprint $table) {
+        Schema::table('pendaftar', function (Blueprint $table) {
             $table->dropColumn('jadwal_ujian');
             $table->dropColumn('jadwal_masuk');
         });
