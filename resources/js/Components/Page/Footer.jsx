@@ -39,7 +39,9 @@ export default function Footer() {
     // --- Akhir Konten Anda ---
 
     // --- Data Google Maps Anda ---
-    const googleMapsEmbedUrl = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15958.070000000001!2d101.4468!3d0.5097!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMC41MDk3LCAxMDEuNDQ2OA!5e0!3m2!1sen!2sid!4v1678901234567!5m2!1sen!2sid"; // Ganti dengan URL embed yang benar
+    
+    const googleMapsEmbedUrl = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3989.65086910485!2d101.43044257496473!3d0.5249364994699299!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31d5ab6bbb930ac3%3A0xf98043ac3549b8ef!2sRTQ%20AL%20YUSRA%20(%20Rumah%20Tahfidz%20Quran)!5e0!3m2!1sid!2sid!4v1764551694201!5m2!1sid!2sid";
+
     const googleMapsLink = "http://googleusercontent.com/maps.google.com/2"; 
 
     // --- Setup Animasi ---

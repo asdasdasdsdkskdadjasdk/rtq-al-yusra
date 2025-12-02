@@ -1,6 +1,9 @@
 // resources/js/Components/Page/Panduan/PanduanCard.jsx
 
-// === KOLEKSI IKON (SVG) ===
+// --- KOLEKSI IKON (SVG) ---
+// Kita definisikan ikon langsung di sini agar pasti ada
+const DefaultIcon = ({ className }) => <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+
 export const BuatAkunIcon = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z" /></svg>;
 export const VerifikasiAkunIcon = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.602-3.751m-11.25-4.439a9 9 0 0111.25 0l-5.625 5.625a3.75 3.75 0 01-5.304 0l-5.625-5.625z" /></svg>;
 export const PilihFormulirIcon = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M10.125 2.25h-4.5c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125v-9M10.125 2.25h.375a9 9 0 019 9v.375M10.125 2.25A3.375 3.375 0 0113.5 5.625v1.5c0 .621.504 1.125 1.125 1.125h1.5a3.375 3.375 0 013.375 3.375M9 15l2.25 2.25L15 12" /></svg>;
@@ -12,27 +15,38 @@ export const MenungguPengumumanIcon = ({ className }) => <svg className={classNa
 export const RegistrasiUlangIcon = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 
 
-// --- Komponen Kartu ---
+// --- KOMPONEN KARTU UTAMA ---
 export default function PanduanCard({ langkah }) {
-    // Memberi nilai default agar tidak error jika props kosong
-    const { color, icon: IconComponent, judul, deskripsi } = langkah || {};
+    // Jika tidak ada data 'langkah', kita berikan objek kosong agar tidak error
+    const data = langkah || {};
+    
+    // Ambil data, berikan nilai default jika kosong
+    const judul = data.judul || 'Judul Tidak Tersedia';
+    const deskripsi = data.deskripsi || 'Deskripsi tidak tersedia.';
+    const color = data.color || 'white';
+    
+    // Tentukan komponen ikon. Jika tidak ada, pakai DefaultIcon agar tidak error/kosong
+    const IconComponent = data.icon || DefaultIcon;
 
-    // Menentukan style berdasarkan warna
+    // Styling berdasarkan warna
     const isWhite = color === 'white';
     const cardBg = isWhite ? 'bg-white' : 'bg-alyusra-orange';
     const titleColor = isWhite ? 'text-alyusra-dark-blue' : 'text-white';
     const textColor = isWhite ? 'text-gray-600' : 'text-white';
     const iconContainerBg = isWhite ? 'bg-orange-100' : 'bg-white/25';
     const iconColor = isWhite ? 'text-alyusra-orange' : 'text-white';
-    
+
     return (
         <div className={`rounded-xl shadow-lg p-8 h-full flex flex-col items-center text-center ${cardBg}`}>
-            <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 ${iconContainerBg}`}>
-                {/* Hanya render ikon jika ada */}
-                {IconComponent && <IconComponent className={`w-10 h-10 ${iconColor}`} />}
+            
+            {/* Bagian Ikon dalam Lingkaran */}
+            <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 flex-shrink-0 ${iconContainerBg}`}>
+                <IconComponent className={`w-10 h-10 ${iconColor}`} />
             </div>
-            <div className="flex flex-col flex-grow">
-                <h3 className={`font-bold text-xl mb-2 ${titleColor}`}>
+
+            {/* Bagian Teks */}
+            <div className="flex flex-col flex-grow w-full">
+                <h3 className={`font-bold text-xl mb-3 ${titleColor}`}>
                     {judul}
                 </h3>
                 <p className={`text-sm leading-relaxed flex-grow ${textColor}`}>

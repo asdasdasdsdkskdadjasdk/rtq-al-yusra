@@ -9,6 +9,7 @@ use App\Http\Controllers\KelulusanController;
 use App\Http\Controllers\FormulirController;
 use App\Http\Controllers\PsbController;
 use App\Http\Controllers\PageController; // Pastikan ini diimpor
+use App\Http\Controllers\AdminBeritaController; // <-- Jangan lupa import
 
 /*
 |--------------------------------------------------------------------------
@@ -45,6 +46,8 @@ Route::get('/panduan-pendaftaran', function () {
 Route::get('/kontak', [PageController::class, 'kontak'])->name('kontak');
 
 Route::get('/berita', [BeritaController::class, 'index'])->name('berita.index');
+
+
 Route::get('/berita/{id}', [BeritaController::class, 'show'])->name('berita.show');
 
 Route::get('/cek-kelulusan', [KelulusanController::class, 'index'])->name('kelulusan.index');
@@ -67,6 +70,18 @@ Route::middleware('auth')->group(function () {
 
     // Rute untuk Admin PSB
     Route::get('/admin/psb/pendaftaran', [PsbController::class, 'index'])->name('psb.pendaftaran.index');
+
+    // RUTE MANAJEMEN BERITA (ADMIN)
+    Route::get('/admin/berita', [AdminBeritaController::class, 'index'])->name('admin.berita.index');
+    Route::get('/admin/berita/create', [AdminBeritaController::class, 'create'])->name('admin.berita.create');
+    Route::post('/admin/berita', [AdminBeritaController::class, 'store'])->name('admin.berita.store');
+    Route::delete('/admin/berita/{berita}', [AdminBeritaController::class, 'destroy'])->name('admin.berita.destroy');
+    
+});
+
+// Route Admin (Harus Login & Role Tertentu)
+Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
+    Route::resource('berita', AdminBeritaController::class)->names('admin.berita');
 });
 
 require __DIR__.'/auth.php';

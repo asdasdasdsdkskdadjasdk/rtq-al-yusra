@@ -20,14 +20,17 @@ const NavLink = ({ href, active, children }) => (
     </Link>
 );
 
+const BeritaIcon = () => <svg className="w-6 h-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3h4m-4 16v4m-4-16v4" /></svg>;
+
 // === DATASTRUKTUR MENU BERDASARKAN PERAN ===
 const navigationMenu = {
-    psb: [
+    PSB: [ 
         { name: 'Dasboard', href: route('dashboard'), icon: DashboardIcon, current: 'dashboard' },
         // UBAH HREF DI SINI
         { name: 'Pendaftaran', href: route('psb.pendaftaran.index'), icon: PendaftaranIcon, current: 'psb.pendaftaran.index' },
         { name: 'Status Lulus', href: '#', icon: StatusLulusIcon, current: 'status.lulus' },
         { name: 'Pengaturan Jadwal', href: '#', icon: PengaturanJadwalIcon, current: 'pengaturan.jadwal' },
+        { name: 'Berita & Info', href: route('admin.berita.index'), icon: BeritaIcon, current: 'admin.berita.*' },
     ],
     keuangan: [
         { name: 'Dasboard', href: route('dashboard'), icon: DashboardIcon, current: 'dashboard' },

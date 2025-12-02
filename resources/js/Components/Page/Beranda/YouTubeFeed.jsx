@@ -75,7 +75,7 @@ const YouTubeFeed = () => {
                     {videoData.map((video) => (
                         // MOTION ITEM: Menggunakan variants dari container
                         <motion.div 
-                            className="video-list-item" 
+                            className="video-list-item "
                             key={video.videoId}
                             variants={itemVariants}
                         >
