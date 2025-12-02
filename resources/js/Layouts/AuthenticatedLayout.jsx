@@ -31,6 +31,9 @@ const navigationMenu = {
         { name: 'Status Lulus', href: '#', icon: StatusLulusIcon, current: 'status.lulus' },
         { name: 'Pengaturan Jadwal', href: '#', icon: PengaturanJadwalIcon, current: 'pengaturan.jadwal' },
         { name: 'Berita & Info', href: route('admin.berita.index'), icon: BeritaIcon, current: 'admin.berita.*' },
+        { name: 'Biaya', href: route('admin.biaya.index'), icon: BeritaIcon, current: 'admin.biaya.*' },
+        { name: 'Pengaturan Jadwal', href: route('admin.jadwal.index'), icon: PengaturanJadwalIcon, current: 'admin.jadwal.*' },
+
     ],
     keuangan: [
         { name: 'Dasboard', href: route('dashboard'), icon: DashboardIcon, current: 'dashboard' },

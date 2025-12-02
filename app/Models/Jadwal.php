@@ -5,15 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Biaya extends Model
+class Jadwal extends Model
 {
     use HasFactory;
 
     protected $guarded = [];
 
-    // Cast kolom 'items' agar otomatis jadi Array saat diambil
     protected $casts = [
-        'items' => 'array',
-        'featured' => 'boolean',
+        'tahapan' => 'array', // Penting agar JSON otomatis jadi Array
     ];
 }

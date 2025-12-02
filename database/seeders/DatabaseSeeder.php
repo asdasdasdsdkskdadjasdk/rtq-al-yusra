@@ -1,36 +1,66 @@
 <?php
 
+namespace Database\Seeders;
+
+use App\Models\User;
 use Illuminate\Database\Seeder;
-use App\Models\User; // <-- Jangan lupa import User model
+use Illuminate\Support\Facades\Hash; // Import Hash Facade
 
 class DatabaseSeeder extends Seeder
 {
+    /**
+     * Seed the application's database.
+     */
     public function run(): void
     {
-        // User untuk PSB
+        // Password default untuk semua akun
+        $defaultPassword = Hash::make('admin12345');
+
+        // 1. User untuk Admin PSB (Penerimaan Siswa Baru)
         User::factory()->create([
             'name' => 'Admin PSB',
             'email' => 'psb@example.com',
-            'role' => 'psb', // role admin PSB
+            'role' => 'PSB',
+            'password' => $defaultPassword,
         ]);
 
-        // User untuk Keuangan
+        // 2. User untuk Admin Keuangan
         User::factory()->create([
             'name' => 'Admin Keuangan',
             'email' => 'keuangan@example.com',
-            'role' => 'keuangan', // role admin Keuangan
+            'role' => 'keuangan',
+            'password' => $defaultPassword,
         ]);
 
-        // User untuk Calon Santri
+        // 3. User untuk Calon Santri (Contoh)
         User::factory()->create([
             'name' => 'Calon Santri',
             'email' => 'santri@example.com',
-            'role' => 'calon_santri', // role default
+            'role' => 'calon_santri',
+            'password' => $defaultPassword,
         ]);
+
+        // 4. User untuk Wali Santri (Contoh)
         User::factory()->create([
             'name' => 'Wali Santri',
             'email' => 'walisantri@example.com',
-            'role' => 'wali_santri', // role default
+            'role' => 'wali_santri',
+            'password' => $defaultPassword,
+        ]);
+        
+        // 5. User Administrator Utama (Opsional, buat jaga-jaga)
+        User::factory()->create([
+            'name' => 'Super Admin',
+            'email' => 'admin@example.com',
+            'role' => 'admin', // Pastikan role ini ditangani di sistem Anda jika ada
+            'password' => $defaultPassword,
+        ]);
+
+        // Panggil Seeder Lainnya
+        $this->call([
+            BiayaSeeder::class,
+            JadwalSeeder::class,
+            // BeritaSeeder::class, // Uncomment jika sudah membuat BeritaSeeder
         ]);
     }
 }

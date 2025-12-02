@@ -10,6 +10,8 @@ use App\Http\Controllers\FormulirController;
 use App\Http\Controllers\PsbController;
 use App\Http\Controllers\PageController; // Pastikan ini diimpor
 use App\Http\Controllers\AdminBeritaController; // <-- Jangan lupa import
+use App\Http\Controllers\AdminBiayaController; // <--- PASTIKAN BARIS INI ADA!
+use App\Http\Controllers\AdminJadwalController;
 
 /*
 |--------------------------------------------------------------------------
@@ -31,13 +33,9 @@ Route::get('/pendaftaran', function () {
     return Inertia::render('Pendaftaran');
 })->name('pendaftaran');
 
-Route::get('/jadwal', function () {
-    return Inertia::render('Jadwal');
-})->name('jadwal');
+Route::get('/jadwal', [PageController::class, 'jadwal'])->name('jadwal');
 
-Route::get('/biaya-pendidikan', function () {
-    return Inertia::render('BiayaPendidikan');
-})->name('biaya.pendidikan');
+Route::get('/biaya-pendidikan', [PageController::class, 'biaya'])->name('biaya.pendidikan');
 
 Route::get('/panduan-pendaftaran', function () {
     return Inertia::render('PanduanPendaftaran');
@@ -77,6 +75,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/admin/berita', [AdminBeritaController::class, 'store'])->name('admin.berita.store');
     Route::delete('/admin/berita/{berita}', [AdminBeritaController::class, 'destroy'])->name('admin.berita.destroy');
     
+    // RUTE MANAJEMEN BIAYA (PSB)
+    Route::resource('biaya', \App\Http\Controllers\AdminBiayaController::class)->names('admin.biaya');
+
+    Route::resource('jadwal', AdminJadwalController::class)->names('admin.jadwal');
 });
 
 // Route Admin (Harus Login & Role Tertentu)

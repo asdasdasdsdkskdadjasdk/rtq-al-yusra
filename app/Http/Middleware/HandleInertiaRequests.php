@@ -41,6 +41,11 @@ public function share(Request $request): array
                 'role' => $request->user()->role, // <-- TAMBAHKAN BARIS INI
             ] : null,
         ],
+
+        'ziggy' => fn () => [
+                ...(new \Tighten\Ziggy\Ziggy)->toArray(),
+                'location' => $request->url(),
+            ],
         // ...
     ];
 }
