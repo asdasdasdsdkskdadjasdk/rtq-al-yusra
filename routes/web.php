@@ -8,31 +8,28 @@ use App\Http\Controllers\BeritaController;
 use App\Http\Controllers\KelulusanController;
 use App\Http\Controllers\FormulirController;
 use App\Http\Controllers\PsbController;
-use App\Http\Controllers\PageController; // Pastikan ini diimpor
-use App\Http\Controllers\AdminBeritaController; // <-- Jangan lupa import
-use App\Http\Controllers\AdminBiayaController; // <--- PASTIKAN BARIS INI ADA!
+use App\Http\Controllers\PageController;
+use App\Http\Controllers\AdminBeritaController;
+use App\Http\Controllers\AdminBiayaController;
 use App\Http\Controllers\AdminJadwalController;
-
+use App\Http\Controllers\AdminProgramController; // <--- Tambahkan ini
+use App\Http\Controllers\AdminTestimonialController; //--- Tambahkan ini
+use App\Http\Controllers\PaymentController; // Jangan lupa import
 /*
 |--------------------------------------------------------------------------
 | Web Routes
 |--------------------------------------------------------------------------
 */
 
-// --- RUTE PUBLIK (Bisa diakses siapa saja) ---
-Route::get('/', function () {
-    return Inertia::render('Beranda', [
-        'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
-    ]);
-})->name('home');
+// =========================================================================
+// 1. RUTE PUBLIK (Bisa diakses tanpa login)
+// =========================================================================
 
-Route::get('/pendaftaran', function () {
-    return Inertia::render('Pendaftaran');
-})->name('pendaftaran');
+Route::get('/', [PageController::class, 'beranda'])->name('home');
 
+Route::get('/pendaftaran', [PageController::class, 'pendaftaran'])->name('pendaftaran');
+
+// Rute ini aman sekarang karena rute admin sudah dipindah ke /admin/jadwal
 Route::get('/jadwal', [PageController::class, 'jadwal'])->name('jadwal');
 
 Route::get('/biaya-pendidikan', [PageController::class, 'biaya'])->name('biaya.pendidikan');
@@ -43,47 +40,68 @@ Route::get('/panduan-pendaftaran', function () {
 
 Route::get('/kontak', [PageController::class, 'kontak'])->name('kontak');
 
+// Berita Publik
 Route::get('/berita', [BeritaController::class, 'index'])->name('berita.index');
-
-
 Route::get('/berita/{id}', [BeritaController::class, 'show'])->name('berita.show');
 
+// Cek Kelulusan
 Route::get('/cek-kelulusan', [KelulusanController::class, 'index'])->name('kelulusan.index');
 Route::post('/cek-kelulusan', [KelulusanController::class, 'check'])->name('kelulusan.check');
 
+Route::post('/midtrans/notification', [PaymentController::class, 'notification']);
+// =========================================================================
+// 2. RUTE USER / UMUM (Perlu Login)
+// =========================================================================
 
-// --- RUTE YANG MEMBUTUHKAN LOGIN (Dilindungi Middleware 'auth') ---
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard');
     })->middleware('verified')->name('dashboard');
     
+    // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // PERBAIKAN: Rute formulir dipindahkan ke sini
+    // Formulir Pendaftaran (User mengisi form)
     Route::get('/formulir/{program_slug}', [FormulirController::class, 'create'])->name('formulir.create');
     Route::post('/formulir', [FormulirController::class, 'store'])->name('formulir.store');
 
-    // Rute untuk Admin PSB
+    // Dashboard Khusus PSB (Jika admin perlu akses ini tanpa prefix 'admin')
     Route::get('/admin/psb/pendaftaran', [PsbController::class, 'index'])->name('psb.pendaftaran.index');
-
-    // RUTE MANAJEMEN BERITA (ADMIN)
-    Route::get('/admin/berita', [AdminBeritaController::class, 'index'])->name('admin.berita.index');
-    Route::get('/admin/berita/create', [AdminBeritaController::class, 'create'])->name('admin.berita.create');
-    Route::post('/admin/berita', [AdminBeritaController::class, 'store'])->name('admin.berita.store');
-    Route::delete('/admin/berita/{berita}', [AdminBeritaController::class, 'destroy'])->name('admin.berita.destroy');
-    
-    // RUTE MANAJEMEN BIAYA (PSB)
-    Route::resource('biaya', \App\Http\Controllers\AdminBiayaController::class)->names('admin.biaya');
-
-    Route::resource('jadwal', AdminJadwalController::class)->names('admin.jadwal');
+    Route::get('/pembayaran/{id}', [PaymentController::class, 'show'])->name('pembayaran.show');
 });
 
-// Route Admin (Harus Login & Role Tertentu)
+
+// =========================================================================
+// 3. RUTE ADMIN (Perlu Login + Prefix 'admin')
+// =========================================================================
+// Semua URL di sini akan diawali dengan /admin/
+// Contoh: /admin/jadwal, /admin/biaya, /admin/berita
+
 Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
+    
+    // Resource Jadwal (Admin)
+    // URL: /admin/jadwal
+    // Nama Route: admin.jadwal.index, admin.jadwal.create, dst.
+    Route::resource('jadwal', AdminJadwalController::class)->names('admin.jadwal');
+
+    // Resource Biaya (Admin)
+    // URL: /admin/biaya
+    // Nama Route: admin.biaya.index, admin.biaya.create, dst.
+    Route::resource('biaya', AdminBiayaController::class)->names('admin.biaya');
+
+    // Resource Berita (Admin)
+    // URL: /admin/berita
+    // Nama Route: admin.berita.index, admin.berita.create, dst.
     Route::resource('berita', AdminBeritaController::class)->names('admin.berita');
+// Resource Program / Formulir (Admin)
+
+    // URL: /admin/program
+    // Nama Route: admin.program.index, admin.program.create, dst.
+    Route::resource('program', AdminProgramController::class)->names('admin.program');
+
+    Route::resource('testimonial', \App\Http\Controllers\AdminTestimonialController::class)->names('admin.testimonial');
 });
 
 require __DIR__.'/auth.php';

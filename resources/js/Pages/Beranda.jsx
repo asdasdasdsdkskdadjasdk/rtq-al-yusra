@@ -8,7 +8,7 @@ import InfoBoxes from '@/Components/Page/Beranda/InfoBoxes';
 import Testimonials from '@/Components/Page/Beranda/Testimonials';
 import CallToAction from '@/Components/Page/Beranda/CallToAction';
 
-export default function Beranda({ auth }) {
+export default function Beranda({ auth,testimonials }) {
     return (
         <AppLayout auth={auth}> {/* <-- Teruskan ke AppLayout */}
             <Head title="Selamat Datang di RTQ Al-Yusra" />
@@ -17,8 +17,7 @@ export default function Beranda({ auth }) {
             <InfoBoxes />
             <CallToAction />
             <YouTubeFeed />
-            <Testimonials />
-
+<Testimonials testimonials={testimonials} />
         </AppLayout>
     );
 }

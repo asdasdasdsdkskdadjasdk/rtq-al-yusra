@@ -8,6 +8,10 @@ const PendaftaranIcon = () => <svg className="w-6 h-6 mr-3" fill="none" viewBox=
 const StatusLulusIcon = () => <svg className="w-6 h-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 const PengaturanJadwalIcon = () => <svg className="w-6 h-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>;
 const KeuanganIcon = () => <svg className="w-6 h-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v.01" /></svg>;
+const BeritaIcon = () => <svg className="w-6 h-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3h4m-4 16v4m-4-16v4" /></svg>;
+const TestimoniIcon = () => <svg className="w-6 h-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" /></svg>;
+// --- TAMBAHAN IKON PROGRAM ---
+const ProgramIcon = () => <svg className="w-6 h-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>;
 
 
 // === Komponen NavLink ===
@@ -20,27 +24,27 @@ const NavLink = ({ href, active, children }) => (
     </Link>
 );
 
-const BeritaIcon = () => <svg className="w-6 h-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3h4m-4 16v4m-4-16v4" /></svg>;
 
 // === DATASTRUKTUR MENU BERDASARKAN PERAN ===
 const navigationMenu = {
     PSB: [ 
         { name: 'Dasboard', href: route('dashboard'), icon: DashboardIcon, current: 'dashboard' },
-        // UBAH HREF DI SINI
-        { name: 'Pendaftaran', href: route('psb.pendaftaran.index'), icon: PendaftaranIcon, current: 'psb.pendaftaran.index' },
-        { name: 'Status Lulus', href: '#', icon: StatusLulusIcon, current: 'status.lulus' },
-        { name: 'Pengaturan Jadwal', href: '#', icon: PengaturanJadwalIcon, current: 'pengaturan.jadwal' },
-        { name: 'Berita & Info', href: route('admin.berita.index'), icon: BeritaIcon, current: 'admin.berita.*' },
-        { name: 'Biaya', href: route('admin.biaya.index'), icon: BeritaIcon, current: 'admin.biaya.*' },
-        { name: 'Pengaturan Jadwal', href: route('admin.jadwal.index'), icon: PengaturanJadwalIcon, current: 'admin.jadwal.*' },
+        { name: 'Data Pendaftar', href: route('psb.pendaftaran.index'), icon: PendaftaranIcon, current: 'psb.pendaftaran.index' }, // Saya perjelas namanya
+        
+        // --- TAMBAHAN MENU PROGRAM ---
+        { name: 'Manajemen Program', href: route('admin.program.index'), icon: ProgramIcon, current: 'admin.program.*' },
 
+        { name: 'Pengaturan Jadwal', href: route('admin.jadwal.index'), icon: PengaturanJadwalIcon, current: 'admin.jadwal.*' },
+        { name: 'Biaya Pendidikan', href: route('admin.biaya.index'), icon: KeuanganIcon, current: 'admin.biaya.*' },
+        { name: 'Berita & Info', href: route('admin.berita.index'), icon: BeritaIcon, current: 'admin.berita.*' },
+        { name: 'Testimoni', href: route('admin.testimonial.index'), icon: TestimoniIcon, current: 'admin.testimonial.*' },
+        // Menu non-aktif (sementara)
+        // { name: 'Status Lulus', href: '#', icon: StatusLulusIcon, current: 'status.lulus' },
     ],
     keuangan: [
         { name: 'Dasboard', href: route('dashboard'), icon: DashboardIcon, current: 'dashboard' },
         { name: 'Laporan Keuangan', href: '#', icon: KeuanganIcon, current: 'laporan.keuangan' },
     ],
-    // --- PERUBAHAN DI SINI ---
-    // Diubah dari calon_santri menjadi wali_santri
     wali_santri: [
         { name: 'Dasboard', href: route('dashboard'), icon: DashboardIcon, current: 'dashboard' },
         { name: 'Lihat Status Anak', href: '#', icon: StatusLulusIcon, current: 'status' },
@@ -49,8 +53,6 @@ const navigationMenu = {
 
 
 export default function Authenticated({ auth, children }) {
-    // --- PERUBAHAN DI SINI ---
-    // Diubah dari 'calon_santri' menjadi 'wali_santri' sebagai default
     const userRole = auth.user?.role ?? 'wali_santri';
     const navLinks = navigationMenu[userRole] || [];
 
@@ -74,13 +76,13 @@ export default function Authenticated({ auth, children }) {
 
                 <div className="p-4 border-t">
                     <Link
-    href={route('logout')}
-    method="post"  // <-- PENTING: Pastikan ini ada dan nilainya "post"
-    as="button"     // <-- PENTING: Membuat link berperilaku seperti tombol
-    className="w-full flex items-center justify-center px-4 py-3 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition-colors duration-200"
->
-    <span>Logout</span>
-</Link>
+                        href={route('logout')}
+                        method="post"  
+                        as="button"    
+                        className="w-full flex items-center justify-center px-4 py-3 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition-colors duration-200"
+                    >
+                        <span>Logout</span>
+                    </Link>
                 </div>
             </aside>
             

@@ -1,17 +1,15 @@
 // resources/js/Components/Page/Beranda/Testimonials.jsx
 
-import { motion } from 'framer-motion'; // <-- 1. Import motion
-import { useInView } from 'react-intersection-observer'; // <-- 2. Import useInView
+import { motion } from 'framer-motion'; 
+import { useInView } from 'react-intersection-observer'; 
 
-// Ikon kutip (tidak perlu diubah)
+// Ikon kutip (Tetap sama)
 const QuoteIcon = () => (
     <svg className="w-16 h-16 text-alyusra-orange opacity-20 mb-4" fill="currentColor" viewBox="0 0 32 32">
         <path d="M9.19,21.34c0-2.3,0.3-4.32,0.89-6.07c0.6-1.75,1.53-3.19,2.79-4.32C14.12,9.82,15.8,9.19,17.78,9.19 c-0.12,1.63-0.18,2.88-0.18,3.75c0,1.75,0.3,3.31,0.89,4.69c-1.5,1.25-3.06,2.69-4.69,4.32C12.44,23.19,10.94,24.38,9.19,25.56V21.34z M20.38,21.34c0-2.3,0.3-4.32,0.89-6.07c0.6-1.75,1.53-3.19,2.79-4.32c1.25-1.12,2.94-1.75,4.94-1.75c-0.12,1.63-0.18,2.88-0.18,3.75c0,1.75,0.3,3.31,0.89,4.69c-1.5,1.25-3.06,2.69-4.69,4.32 C23.62,23.19,22.12,24.38,20.38,25.56V21.34z"></path>
     </svg>
 );
 
-
-// KOMPONEN KARTU TESTIMONI (Tidak perlu diubah, animasi diterapkan di parent)
 const TestimonialCard = ({ testimonial }) => {
     const isWhite = testimonial.type === 'white';
     const cardBg = isWhite ? 'bg-white' : 'bg-alyusra-orange';
@@ -19,15 +17,24 @@ const TestimonialCard = ({ testimonial }) => {
     const nameColor = isWhite ? 'text-alyusra-dark-blue' : 'text-white';
     const lineColor = isWhite ? 'border-gray-200' : 'border-white/30';
 
+    // Cek apakah avatar adalah URL eksternal (http) atau file lokal (storage)
+    const avatarSrc = testimonial.avatar && testimonial.avatar.startsWith('http') 
+        ? testimonial.avatar 
+        : `/storage/${testimonial.avatar}`;
+
     return (
         <div className={`rounded-xl shadow-lg p-8 flex flex-col ${cardBg}`}>
             <QuoteIcon />
             <p className={`italic text-lg flex-grow mb-6 ${textColor}`}>
-                {testimonial.quote}
+                "{testimonial.quote}"
             </p>
             <hr className={`border-t my-4 ${lineColor}`} />
             <div className="flex items-center">
-                <img src={testimonial.avatar} alt={testimonial.name} className="w-14 h-14 rounded-full mr-4 object-cover bg-white" />
+                <img 
+                    src={testimonial.avatar ? avatarSrc : 'https://ui-avatars.com/api/?name='+testimonial.name} 
+                    alt={testimonial.name} 
+                    className="w-14 h-14 rounded-full mr-4 object-cover bg-white" 
+                />
                 <div>
                     <h4 className={`font-bold text-xl ${nameColor}`}>{testimonial.name}</h4>
                     <p className={`text-sm opacity-90 ${textColor}`}>{testimonial.role}</p>
@@ -37,53 +44,27 @@ const TestimonialCard = ({ testimonial }) => {
     );
 };
 
-
-// KOMPONEN UTAMA TESTIMONIALS
-export default function Testimonials() {
-    // Data testimoni (tidak perlu diubah)
-    //
-    const testimonials = [
-        { type: 'white', name: 'Ust Abdul Somad', role: 'Ulama Indonesia', quote: 'Mendirikan Rumah Tahfidz adalah investasi terbaik untuk akhirat. Di tempat seperti Al-Yusra inilah, bibit-bibit generasi Qur\'ani yang akan memimpin umat di masa depan ditanam dan dirawat.', avatar: 'https://th.bing.com/th/id/OIP.F8uHI6ZA7rDTVKlg4lWCcgHaHa?w=166&h=180&c=7&r=0&o=7&dpr=1.3&pid=1.7&rm=3' },
-        { type: 'orange', name: 'Muzammil Hasballah', role: 'Qori Internasional', quote: 'Keindahan Al-Quran tidak hanya terletak pada hafalannya, tetapi juga pada cara melantunkannya. Saya gembira melihat Al-Yusra fokus pada pembinaan tahsin dan tajwid untuk menyempurnakan bacaan para santri.', avatar: 'https://th.bing.com/th/id/OIP.M_K8D8WUG8KBB9C5pwiBbQHaHa?w=164&h=180&c=7&r=0&o=7&dpr=1.3&pid=1.7&rm=3' },
-        { type: 'orange', name: 'Ust Hanan Attaki', role: 'Pendakwah', quote: 'Untuk anak-anak muda, mendekat kepada Al-Quran adalah cara terbaik menemukan ketenangan dan \'healing\' yang sesungguhnya. Semoga Al-Yusra menjadi rumah yang nyaman bagi hati-hati yang rindu pada petunjuk-Nya.', avatar: 'https://th.bing.com/th/id/OIP.5zQyOiUoFpmx-PDQ39rT8QHaEK?w=277&h=180&c=7&r=0&o=7&dpr=1.3&pid=1.7&rm=3' }
-    ];
-
-    // 3. Setup useInView untuk section
+// Terima props 'testimonials' di sini
+export default function Testimonials({ testimonials }) {
+    
+    // Setup useInView (tetap sama)
     const { ref: sectionRef, inView: sectionInView } = useInView({
         triggerOnce: true,
-        threshold: 0.1, // Animasikan saat 10% section terlihat
+        threshold: 0.1, 
     });
 
-    // 4. Varian animasi untuk judul
-    const titleVariants = {
-        hidden: { opacity: 0, y: -30 },
-        visible: { opacity: 1, y: 0 },
-    };
+    // Variants animasi (tetap sama)
+    const titleVariants = { hidden: { opacity: 0, y: -30 }, visible: { opacity: 1, y: 0 } };
+    const gridContainerVariants = { hidden: { opacity: 1 }, visible: { opacity: 1, transition: { staggerChildren: 0.2 } } };
+    const cardVariants = { hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0 } };
 
-    // 5. Varian animasi untuk container grid kartu (untuk efek stagger)
-    const gridContainerVariants = {
-        hidden: { opacity: 1 }, // Container awalnya terlihat
-        visible: {
-            opacity: 1,
-            transition: {
-                staggerChildren: 0.2 // Beri jeda 0.2 detik antar animasi kartu
-            }
-        }
-    };
-
-     // 6. Varian animasi untuk setiap kartu
-    const cardVariants = {
-        hidden: { opacity: 0, y: 30 },
-        visible: { opacity: 1, y: 0 },
-    };
-
+    // Jika data kosong, jangan render section
+    if (!testimonials || testimonials.length === 0) return null;
 
     return (
-        // Tambahkan ref ke section
-        <section ref={sectionRef} className="py-20 bg-dots-pattern bg-dots-size bg-repeat bg-gray-50 overflow-hidden"> {/* Tambah overflow-hidden */}
+        <section ref={sectionRef} className="py-20 bg-dots-pattern bg-dots-size bg-repeat bg-gray-50 overflow-hidden">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                 
-                {/* 7. Animasikan Judul */}
                 <motion.h2 
                     initial="hidden"
                     animate={sectionInView ? "visible" : "hidden"}
@@ -98,18 +79,17 @@ export default function Testimonials() {
                     </span>
                 </motion.h2>
                 
-                {/* 8. Animasikan Container Grid Kartu */}
                 <motion.div 
                     initial="hidden"
                     animate={sectionInView ? "visible" : "hidden"}
-                    variants={gridContainerVariants} // Gunakan varian container
+                    variants={gridContainerVariants} 
                     className="mt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
                 >
-                    {testimonials.map((testi, index) => (
-                        // 9. Animasikan setiap Kartu di dalam container
+                    {/* Map data dari props */}
+                    {testimonials.map((testi) => (
                         <motion.div 
-                            key={index}
-                            variants={cardVariants} // Gunakan varian kartu
+                            key={testi.id} // Gunakan ID dari database
+                            variants={cardVariants} 
                             transition={{ duration: 0.5, ease: "easeOut" }}
                          >
                             <TestimonialCard testimonial={testi} />

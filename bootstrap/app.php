@@ -16,6 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ]);
 
+        $middleware->validateCsrfTokens(except: [
+        'midtrans/notification', // <-- Route pengecualian
+    ]);
         //
     })
     ->withExceptions(function (Exceptions $exceptions): void {

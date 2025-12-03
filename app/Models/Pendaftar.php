@@ -43,5 +43,6 @@ class Pendaftar extends Model
         'skbb',
         'sks',
         'status',
+        'snap_token',
     ];
 }
