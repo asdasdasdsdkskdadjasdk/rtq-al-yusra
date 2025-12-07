@@ -16,10 +16,13 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ]);
 
+        // --- GABUNGKAN SEMUA PENGECUALIAN DI SINI ---
         $middleware->validateCsrfTokens(except: [
-        'midtrans/notification', // <-- Route pengecualian
-    ]);
-        //
+            'midtrans-notification',      // Route utama Anda
+            'api/midtrans-notification',  // Alternatif jika pakai prefix api
+            'midtrans/notification',      // Alternatif lain (jaga-jaga)
+        ]);
+        // ---------------------------------------------
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

@@ -39,6 +39,7 @@ public function share(Request $request): array
                 'name' => $request->user()->name,
                 'email' => $request->user()->email,
                 'role' => $request->user()->role, // <-- TAMBAHKAN BARIS INI
+                'pendaftar' => $request->user()->pendaftar,
             ] : null,
         ],
 

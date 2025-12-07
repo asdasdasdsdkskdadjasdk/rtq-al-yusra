@@ -29,6 +29,11 @@ class ProgramSeeder extends Seeder
                 'biaya' => 'Rp.300,000',
                 'color' => '#E85B25',
                 'featured' => false,
+                'materi_ujian' => [
+        'Hafalan Doa Harian',
+        'Mewarnai & Menggambar',
+        'Wawancara Orang Tua'
+    ],
             ],
             [
                 'jenis' => 'Reguler',
@@ -47,6 +52,11 @@ class ProgramSeeder extends Seeder
                 'biaya' => 'Rp.300,000',
                 'color' => '#22C5A3',
                 'featured' => true,
+                'materi_ujian' => [
+        'Tes Bacaan Al-Quran (Tahsin)',
+        'Hafalan Jus 30 (Surat An-Naba s/d An-Nas)',
+        'Tes Wawancara Santri'
+    ],
             ],
             [
                 'jenis' => 'Beasiswa',
@@ -66,6 +76,11 @@ class ProgramSeeder extends Seeder
                 'biaya' => 'Rp.300,000',
                 'color' => '#556187',
                 'featured' => false,
+                'materi_ujian' => [
+        'Tes Bacaan Al-Quran (Tahsin)',
+        'Hafalan Jus 30 (Surat An-Naba s/d An-Nas)',
+        'Tes Wawancara Santri'
+    ],
             ],
         ];
 

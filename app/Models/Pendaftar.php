@@ -9,18 +9,10 @@ class Pendaftar extends Model
 {
     use HasFactory;
 
-    /**
-     * Nama tabel yang terhubung dengan model.
-     *
-     * @var string
-     */
     protected $table = 'pendaftar';
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
+
+
     protected $fillable = [
         'nik',
         'user_id',
@@ -43,6 +35,8 @@ class Pendaftar extends Model
         'skbb',
         'sks',
         'status',
+        'nominal_pembayaran', // Pastikan kolom ini ada di fillable
+        'status_pembayaran',  // Pastikan kolom ini ada di fillable
         'snap_token',
     ];
 }

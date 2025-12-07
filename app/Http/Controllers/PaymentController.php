@@ -7,14 +7,21 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Midtrans\Config;
 use Midtrans\Snap;
+use Illuminate\Support\Facades\Log;
 
 class PaymentController extends Controller
 {
     public function show($id)
     {
-        $pendaftar = Pendaftar::findOrFail($id);
-if ($pendaftar->user_id !== \Illuminate\Support\Facades\Auth::id()) {
-        abort(403);
+        // Cari pendaftar berdasarkan NIK
+        // Jika data sudah dihapus (karena expire), ini akan otomatis return 404 (Not Found)
+$pendaftar = Pendaftar::findOrFail($id);
+        if ($pendaftar->user_id !== \Illuminate\Support\Facades\Auth::id()) {
+            abort(403);
+        }
+
+        if ($pendaftar->status_pembayaran == 'Lunas') {
+        return redirect()->route('status.cek');
     }
     
         // Konfigurasi Midtrans
@@ -23,12 +30,12 @@ if ($pendaftar->user_id !== \Illuminate\Support\Facades\Auth::id()) {
         Config::$isSanitized = config('midtrans.is_sanitized');
         Config::$is3ds = config('midtrans.is_3ds');
 
-        // Jika belum ada snap_token atau status masih belum bayar, buat token baru
-        if (empty($pendaftar->snap_token) && $pendaftar->status_pembayaran == 'Belum Bayar') {
+        // Generate Token baru jika belum ada
+        if (empty($pendaftar->snap_token) && $pendaftar->status_pembayaran == 'Belum Bayar' && $pendaftar->nominal_pembayaran > 0) {
             
             $params = [
                 'transaction_details' => [
-                    'order_id' => $pendaftar->no_pendaftaran . '-' . rand(100,999), // Order ID harus unik
+                    'order_id' => $pendaftar->no_pendaftaran . '-' . time(), // Order ID unik
                     'gross_amount' => (int) $pendaftar->nominal_pembayaran,
                 ],
                 'customer_details' => [
@@ -36,51 +43,68 @@ if ($pendaftar->user_id !== \Illuminate\Support\Facades\Auth::id()) {
                     'email' => $pendaftar->email,
                     'phone' => $pendaftar->no_hp,
                 ],
+                // --- PENTING: SETTING WAKTU KADALUWARSA ---
+                // Di sini kita atur agar Midtrans otomatis menganggap expire setelah waktu tertentu
+                'expiry' => [
+                    'start_time' => date("Y-m-d H:i:s O"),
+                    'unit' => 'minutes', 
+                    'duration' => 1 // Data dihapus jika tidak dibayar dalam 60 menit
+                ],
             ];
 
-            $snapToken = Snap::getSnapToken($params);
-            
-            $pendaftar->update(['snap_token' => $snapToken]);
+            try {
+                $snapToken = Snap::getSnapToken($params);
+                $pendaftar->update(['snap_token' => $snapToken]);
+            } catch (\Exception $e) {
+                Log::error('Midtrans Error: ' . $e->getMessage());
+            }
         }
 
+        // Render halaman
         return Inertia::render('Pembayaran', [
             'pendaftar' => $pendaftar,
-            'clientKey' => config('midtrans.client_key'), // Kirim Client Key ke Frontend
+            'clientKey' => config('midtrans.client_key'),
+            // 'qrCode' => ... (kode qr statis Anda jika ada)
         ]);
     }
 
-    // Webhook untuk menerima notifikasi dari Midtrans (Otomatis update status)
+    // --- LOGIKA UTAMA: WEBHOOK NOTIFICATION ---
+    // Method ini yang dipanggil otomatis oleh Midtrans di background
     public function notification(Request $request)
     {
-        $serverKey = config('midtrans.server_key');
-        $hashed = hash("sha512", $request->order_id . $request->status_code . $request->gross_amount . $serverKey);
 
+        Log::info('Midtrans Notification Masuk!');
+        Log::info('Data:', $request->all());
+        $serverKey = config('midtrans.server_key');
+        
+        // Validasi Signature
+        $hashed = hash("sha512", $request->order_id . $request->status_code . $request->gross_amount . $serverKey);
+        
         if ($hashed == $request->signature_key) {
-            // Cari pendaftar berdasarkan sebagian no_pendaftaran (karena kita tambah rand tadi)
-            // Atau lebih aman simpan order_id di DB. Untuk simpel, kita explode string.
+            
+            // Parsing Order ID untuk mendapatkan No Pendaftaran asli
             $orderIdParts = explode('-', $request->order_id);
-            // Gabungkan kembali kecuali bagian random terakhir jika formatnya RTQ-YYYY-ID-RAND
-            // Cara paling aman: Simpan 'order_id' Midtrans di tabel pendaftar saat generate token.
-            // TAPI, untuk sekarang kita cari berdasarkan snap_token atau logika sederhana:
-            
-            // Asumsi: order_id formatnya "NO_PENDAFTARAN-RANDOM"
-            // Kita cari user yang punya order_id ini (jika disimpan) atau kita cari manual.
-            // Agar mudah, kita cari user yang nominal & email-nya cocok (alternatif).
-            
-            // SOLUSI TERBAIK: Kita pakai no_pendaftaran asli sebagai order_id (jika yakin unik)
-            // Atau kita cari manual stringnya.
-            $noPendaftaranAsli = implode('-', array_slice($orderIdParts, 0, -1)); // Hapus part random terakhir
-            
+            array_pop($orderIdParts); // Buang timestamp di belakang
+            $noPendaftaranAsli = implode('-', $orderIdParts);
+
             $pendaftar = Pendaftar::where('no_pendaftaran', $noPendaftaranAsli)->first();
 
             if ($pendaftar) {
+                // SKENARIO 1: PEMBAYARAN BERHASIL
                 if ($request->transaction_status == 'capture' || $request->transaction_status == 'settlement') {
                     $pendaftar->update([
                         'status_pembayaran' => 'Lunas',
                         'status' => 'Pendaftaran Diterima'
                     ]);
-                } elseif ($request->transaction_status == 'expire' || $request->transaction_status == 'cancel') {
-                    $pendaftar->update(['status_pembayaran' => 'Gagal']);
+                } 
+                // SKENARIO 2: WAKTU HABIS (EXPIRE) -> HAPUS DATA
+                elseif ($request->transaction_status == 'expire') {
+                    // Hapus data formulir agar user harus daftar ulang
+                    $pendaftar->delete();
+                }
+                // SKENARIO 3: DIBATALKAN (CANCEL/DENY) -> HAPUS DATA
+                elseif ($request->transaction_status == 'cancel' || $request->transaction_status == 'deny') {
+                    $pendaftar->delete();
                 }
             }
         }

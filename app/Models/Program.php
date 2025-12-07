@@ -13,6 +13,7 @@ class Program extends Model
 
     protected $casts = [
         'details' => 'array',   // Penting: agar JSON database jadi Array PHP/JS
+        'materi_ujian' => 'array', // <--- Tambahkan ini
         'featured' => 'boolean',
     ];
 }

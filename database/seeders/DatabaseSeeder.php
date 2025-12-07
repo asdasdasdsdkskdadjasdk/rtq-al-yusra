@@ -60,6 +60,9 @@ class DatabaseSeeder extends Seeder
         $this->call([
             BiayaSeeder::class,
             JadwalSeeder::class,
+            ProgramSeeder::class,      // <--- Tambahkan ini
+            BeritaSeeder::class,       // <--- Tambahkan ini (Uncomment)
+            TestimonialSeeder::class,  // <--- Tambahkan ini
             // BeritaSeeder::class, // Uncomment jika sudah membuat BeritaSeeder
         ]);
     }

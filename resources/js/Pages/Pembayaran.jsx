@@ -169,9 +169,10 @@ export default function Pembayaran({ auth, pendaftar, clientKey, qrCode }) {
                     </div>
 
                     <div className="mt-8 border-t pt-6 text-center">
-                        <Link href={route('dashboard')} className="text-gray-500 hover:text-gray-700 text-sm font-medium flex items-center justify-center gap-2">
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                            Kembali ke Dashboard
+                        <Link href={route('status.cek')}>  {/* GANTI KE ROUTE BARU */}
+                            <PrimaryButton className="mt-6 w-full justify-center">
+                                Lihat Jadwal Ujian & Status
+                            </PrimaryButton>
                         </Link>
                     </div>
 
@@ -180,3 +181,33 @@ export default function Pembayaran({ auth, pendaftar, clientKey, qrCode }) {
         </AppLayout>
     );
 }
+
+// ... import dan kode lainnya ...
+
+const handlePayment = () => {
+    if (window.snap) {
+        window.snap.pay(pendaftar.snap_token, {
+            onSuccess: function(result){
+                alert("Pembayaran Berhasil! Mengalihkan...");
+                // Reload halaman. 
+                // Karena di controller sudah kita pasang redirect, 
+                // reload ini akan otomatis membawa user ke halaman 'status.cek'
+                window.location.reload(); 
+            },
+            onPending: function(result){
+                alert("Menunggu Pembayaran...");
+                window.location.reload();
+            },
+            onError: function(result){
+                alert("Pembayaran Gagal!");
+            },
+            onClose: function(){
+                // Opsional
+            }
+        });
+    } else {
+        alert("Sistem belum siap. Refresh halaman.");
+    }
+};
+
+// ... return JSX ...
