@@ -11,8 +11,6 @@ class Pendaftar extends Model
 
     protected $table = 'pendaftar';
 
-
-
     protected $fillable = [
         'nik',
         'user_id',
@@ -29,14 +27,24 @@ class Pendaftar extends Model
         'alamat',
         'cabang',
         'nama_orang_tua',
+        
+        // Berkas
         'ijazah_terakhir',
         'kartu_keluarga',
         'pas_foto',
         'skbb',
         'sks',
+        
+        // Status & Pembayaran
         'status',
-        'nominal_pembayaran', // Pastikan kolom ini ada di fillable
-        'status_pembayaran',  // Pastikan kolom ini ada di fillable
+        'nominal_pembayaran',
+        'status_pembayaran',
         'snap_token',
+
+        // --- TAMBAHKAN KOLOM JADWAL DI SINI ---
+        'tanggal_ujian',
+        'waktu_ujian',
+        'lokasi_ujian',
+        'catatan_ujian',
     ];
 }

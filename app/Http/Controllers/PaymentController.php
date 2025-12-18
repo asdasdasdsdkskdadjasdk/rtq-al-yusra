@@ -48,7 +48,7 @@ $pendaftar = Pendaftar::findOrFail($id);
                 'expiry' => [
                     'start_time' => date("Y-m-d H:i:s O"),
                     'unit' => 'minutes', 
-                    'duration' => 1 // Data dihapus jika tidak dibayar dalam 60 menit
+                    'duration' => 10 // Data dihapus jika tidak dibayar dalam 60 menit
                 ],
             ];
 

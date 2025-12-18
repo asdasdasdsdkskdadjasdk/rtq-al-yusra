@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Pendaftar;
 use App\Models\Program;
+use App\Models\Jadwal; 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth; 
 use Inertia\Inertia;
@@ -16,7 +17,6 @@ class FormulirController extends Controller
 {
     // --- HELPER METHODS ---
 
-    // 1. Cek apakah user punya pendaftaran aktif
     private function cekPendaftaranAktif($userId)
     {
         return Pendaftar::where('user_id', $userId)
@@ -30,7 +30,7 @@ class FormulirController extends Controller
             ->first();
     }
 
-    // 2. Konversi "23 Februari 2025" ke "2025-02-23" (Format Database)
+    // Helper: Ubah "s.d 22 Februari 2025" -> "2025-02-22"
     private function convertTanggalIndo($stringDate)
     {
         $bulanIndo = [
@@ -39,16 +39,25 @@ class FormulirController extends Controller
             'September' => '09', 'Oktober' => '10', 'November' => '11', 'Desember' => '12'
         ];
 
-        $parts = explode(' ', $stringDate); // ["23", "Februari", "2025"]
+        // 1. Bersihkan kata-kata seperti "s.d", "sampai", dll.
+        // Hanya sisakan angka dan huruf.
+        $cleanString = preg_replace('/[^a-zA-Z0-9\s]/', '', $stringDate); 
+        $parts = explode(' ', trim($cleanString)); 
 
-        if (count($parts) === 3) {
-            $tgl = str_pad($parts[0], 2, '0', STR_PAD_LEFT);
-            $bulan = isset($bulanIndo[$parts[1]]) ? $bulanIndo[$parts[1]] : '01';
-            $tahun = $parts[2];
+        // 2. Ambil 3 bagian TERAKHIR (Tanggal, Bulan, Tahun)
+        // Ini untuk mengantisipasi format "s d 22 Februari 2025" (5 kata) -> kita cuma butuh 3 terakhir
+        if (count($parts) >= 3) {
+            $tahun = array_pop($parts);      // 2025
+            $bulanNama = array_pop($parts);  // Februari
+            $tanggal = array_pop($parts);    // 22
+            
+            $bulan = isset($bulanIndo[$bulanNama]) ? $bulanIndo[$bulanNama] : '01';
+            $tgl = str_pad($tanggal, 2, '0', STR_PAD_LEFT);
+
             return "$tahun-$bulan-$tgl";
         }
 
-        return now()->addDays(3)->toDateString(); // Fallback default
+        return null;
     }
 
     // --- MAIN METHODS ---
@@ -163,94 +172,85 @@ class FormulirController extends Controller
         return redirect()->route('pembayaran.show', ['id' => $pendaftar->id]);
     }
     
-    // --- LOGIKA UTAMA: CEK STATUS & AUTO JADWAL ---
-    
-    
+    // --- LOGIKA UTAMA: CEK STATUS & AUTO JADWAL CERDAS ---
     public function checkStatus()
     {
         $user = auth()->user();
         
-        // 1. Ambil list awal untuk dicek
         $pendaftarList = Pendaftar::where('user_id', $user->id)->get();
 
         if ($pendaftarList->isEmpty()) {
             return redirect()->route('formulir.index')->with('error', 'Anda belum mendaftar.');
         }
 
-        // 2. Lakukan Update Logic
         foreach ($pendaftarList as $pendaftar) {
             
-            // HANYA PROSES JIKA SUDAH LUNAS
+            // 1. Cek Apakah Status Lunas?
             if ($pendaftar->status_pembayaran == 'Lunas') {
                 $updates = [];
 
-                // A. Auto Verifikasi Status (Jika masih menunggu)
+                // Auto Verifikasi
                 if ($pendaftar->status == 'Menunggu Verifikasi') {
                     $updates['status'] = 'Sudah Diverifikasi';
                 }
 
-                // B. Auto Isi Jadwal (Force Update jika null)
-                if (is_null($pendaftar->tanggal_ujian)) {
+                // 2. Cek Apakah Jadwal Masih Kosong? (Gunakan empty agar string kosong "" juga terdeteksi)
+                if (empty($pendaftar->tanggal_ujian)) {
                     
-                    // Cari program berdasarkan nama
-                    $program = Program::where('nama', $pendaftar->program_nama)->first();
-                    
-                    // Fallback default tanggal (hari ini + 3 hari)
-                    $tanggalPilihan = now()->addDays(3)->toDateString(); 
+                    // --- LOGIKA CARI JADWAL ---
+                    $semuaJadwal = Jadwal::all();
+                    $tanggalDipilih = null;
 
-                    if ($program && $program->jadwal) {
-                        // DETEKSI FORMAT JSON
-                        $jadwalData = $program->jadwal;
+                    foreach ($semuaJadwal as $jadwal) {
+                        $tahapan = is_string($jadwal->tahapan) ? json_decode($jadwal->tahapan, true) : $jadwal->tahapan;
                         
-                        // Jika masih berupa string, decode dulu
-                        if (is_string($jadwalData)) {
-                            $decoded = json_decode($jadwalData, true);
-                            // Cek double decode (kasus umum jika copy paste di db)
-                            if (is_string($decoded)) {
-                                $jadwalData = json_decode($decoded, true);
-                            } else {
-                                $jadwalData = $decoded;
-                            }
-                        }
+                        $batasPendaftaran = null;
+                        $tglTesMasuk = null;
 
-                        // LOOPING MENCARI "Tes Masuk"
-                        if (is_array($jadwalData)) {
-                            foreach ($jadwalData as $item) {
-                                // Cek Case Insensitive (Huruf besar/kecil tidak masalah)
-                                if (isset($item['title']) && stripos($item['title'], 'Tes Masuk') !== false) {
-                                    $rawDate = $item['date']; // "23 Februari 2025"
-                                    
-                                    // Panggil Helper Convert
-                                    $hasilConvert = $this->convertTanggalIndo($rawDate);
-                                    
-                                    // Pastikan hasil convert valid, jika tidak pakai fallback
-                                    $tanggalPilihan = $hasilConvert ?: $tanggalPilihan;
-                                    
-                                    break; // Ketemu? Stop looping.
+                        if (is_array($tahapan)) {
+                            foreach ($tahapan as $item) {
+                                if (isset($item['title'])) {
+                                    if (stripos($item['title'], 'Pendaftaran') !== false) {
+                                        $batasPendaftaran = $this->convertTanggalIndo($item['date']);
+                                    }
+                                    if (stripos($item['title'], 'Tes Masuk') !== false) {
+                                        $tglTesMasuk = $this->convertTanggalIndo($item['date']);
+                                    }
                                 }
                             }
                         }
+
+                        // Jika hari ini <= batas pendaftaran, pilih jadwal ini
+                        if ($batasPendaftaran && $tglTesMasuk && now()->toDateString() <= $batasPendaftaran) {
+                            $tanggalDipilih = $tglTesMasuk;
+                            break; 
+                        }
                     }
 
-                    $updates['tanggal_ujian'] = $tanggalPilihan;
+                    // Fallback default
+                    $updates['tanggal_ujian'] = $tanggalDipilih ?: now()->addDays(3)->toDateString();
                     $updates['waktu_ujian'] = '08:00'; 
                     $updates['lokasi_ujian'] = 'Gedung Utama RTQ Al-Yusra';
+                    
+                    // --- DEBUGGING SEMENTARA (HAPUS NANTI) ---
+                    // Kode ini akan mematikan aplikasi dan menampilkan data yang mau disimpan.
+                    // Jika layar Anda putih tulisan hitam berisi array, berarti logika BERJALAN.
+                    // Jika tidak muncul apa-apa (langsung masuk web), berarti logika ini DILEWATI.
+                     //dd('LOGIKA BERJALAN', $updates); 
                 }
 
-                // Eksekusi Update ke Database
+                // Eksekusi Update
                 if (!empty($updates)) {
                     Pendaftar::where('id', $pendaftar->id)->update($updates);
                 }
             }
         }
 
-        // 3. PENTING: Query Ulang Database Agar Data Fresh
-        // Kita ambil ulang data dari database supaya perubahan di atas langsung terbaca frontend
+        // Ambil data fresh untuk ditampilkan
         $pendaftarListFresh = Pendaftar::where('user_id', $user->id)
                                   ->orderBy('created_at', 'desc')
                                   ->get();
 
-        // 4. Attach Materi Ujian ke data fresh
         foreach ($pendaftarListFresh as $pendaftar) {
             $programData = Program::where('nama', $pendaftar->program_nama)->first();
             $pendaftar->materi_ujian_program = $programData ? $programData->materi_ujian : null;
@@ -260,5 +260,4 @@ class FormulirController extends Controller
             'pendaftarList' => $pendaftarListFresh,
         ]);
     }
-
 }
