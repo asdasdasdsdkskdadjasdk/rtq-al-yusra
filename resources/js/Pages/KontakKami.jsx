@@ -1,10 +1,9 @@
-// resources/js/Pages/KontakKami.jsx
-
-import { Head, useForm } from '@inertiajs/react';
+import React from 'react';
+import { Head, usePage } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import { motion } from 'framer-motion';
 
-// --- BAGIAN IKON (Sama seperti sebelumnya) ---
+// --- BAGIAN IKON (TETAP SAMA) ---
 const PhoneIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.948V19a2 2 0 01-2 2h-3.987a1 1 0 01-.994-.959A15.01 15.01 0 003.11 9.987a1 1 0 01-.959-.994V5z" />
@@ -12,7 +11,7 @@ const PhoneIcon = () => (
 );
 const MailIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 00-2-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
     </svg>
 );
 const LocationIcon = () => (
@@ -35,9 +34,20 @@ const YouTubeIcon = () => (
 );
 
 export default function KontakKami({ auth }) {
-    // Catatan: Pastikan URL ini benar-benar URL Embed dari Google Maps (src="https://www.google.com/maps/embed?...")
-    // URL yang Anda contohkan sebelumnya terlihat seperti URL gambar/salah. Gunakan link embed yang valid.
-const mapEmbedUrl = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3989.65086910485!2d101.43044257496473!3d0.5249364994699299!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31d5ab6bbb930ac3%3A0xf98043ac3549b8ef!2sRTQ%20AL%20YUSRA%20(%20Rumah%20Tahfidz%20Quran)!5e0!3m2!1sid!2sid!4v1764551694201!5m2!1sid!2sid";
+    // 1. AMBIL DATA DINAMIS DARI DATABASE
+    const { sekolah } = usePage().props;
+
+    // 2. LOGIKA FORMAT NOMOR WA (08xx -> 628xx)
+    let whatsappLink = '#';
+    if (sekolah.no_hp) {
+        let clean = sekolah.no_hp.replace(/[^0-9]/g, ''); // Hapus non-angka
+        if (clean.startsWith('0')) {
+            clean = '62' + clean.slice(1); // Ganti 0 depan dengan 62
+        }
+        whatsappLink = `https://wa.me/${clean}`;
+    }
+
+    const mapEmbedUrl = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3989.65086910485!2d101.43044257496473!3d0.5249364994699299!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31d5ab6bbb930ac3%3A0xf98043ac3549b8ef!2sRTQ%20AL%20YUSRA%20(%20Rumah%20Tahfidz%20Quran)!5e0!3m2!1sid!2sid!4v1764551694201!5m2!1sid!2sid";
 
     return (
         <AppLayout auth={auth} heroTheme="dark">
@@ -76,27 +86,36 @@ const mapEmbedUrl = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3989.
                         <h2 className="text-2xl font-bold mb-6 border-b pb-3 border-white/40">Detail Kontak</h2>
                         
                         <div className="space-y-6">
+                            {/* ALAMAT */}
                             <div className="flex items-start">
                                 <LocationIcon />
                                 <div className="ml-3">
                                     <p className="font-semibold">Alamat Kami</p>
-                                    <p className="text-sm opacity-90">Gg. Keluarga 66, Kedungsari, Kec. Sukajadi, Kota Pekanbaru, Riau 28156</p>
+                                    <p className="text-sm opacity-90">
+                                        {sekolah.alamat_pusat || 'Alamat belum diatur.'}
+                                    </p>
                                 </div>
                             </div>
                             
+                            {/* EMAIL */}
                             <div className="flex items-center">
                                 <MailIcon />
                                 <div className="ml-3">
                                     <p className="font-semibold">Email</p>
-                                    <p className="text-sm opacity-90">info@alyusra.com</p>
+                                    <p className="text-sm opacity-90">
+                                        {sekolah.email || 'Email belum diatur.'}
+                                    </p>
                                 </div>
                             </div>
                             
+                            {/* TELEPON */}
                             <div className="flex items-center">
                                 <PhoneIcon />
                                 <div className="ml-3">
                                     <p className="font-semibold">Telepon/WA</p>
-                                    <p className="text-sm opacity-90">0852-1866-9128</p>
+                                    <p className="text-sm opacity-90">
+                                        {sekolah.no_hp || 'No HP belum diatur.'}
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -105,16 +124,33 @@ const mapEmbedUrl = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3989.
                         <div className="mt-8 pt-6 border-t border-white/40">
                             <p className="font-semibold text-lg mb-3">Sosial Media Kami</p>
                             <div className="flex space-x-4">
-                                <a href="#" target="_blank" className="text-white hover:text-gray-200 transition"><FacebookIcon /></a>
-                                <a href="#" target="_blank" className="text-white hover:text-gray-200 transition"><InstagramIcon /></a>
-                                <a href="#" target="_blank" className="text-white hover:text-gray-200 transition"><YouTubeIcon /></a>
-                                <a href="https://wa.me/6285218669128" target="_blank" className="text-white hover:text-gray-200 transition"><WhatsappIcon /></a>
+                                {sekolah.facebook && (
+                                    <a href={sekolah.facebook} target="_blank" rel="noreferrer" className="text-white hover:text-gray-200 transition">
+                                        <FacebookIcon />
+                                    </a>
+                                )}
+                                {sekolah.instagram && (
+                                    <a href={sekolah.instagram} target="_blank" rel="noreferrer" className="text-white hover:text-gray-200 transition">
+                                        <InstagramIcon />
+                                    </a>
+                                )}
+                                {sekolah.youtube && (
+                                    <a href={sekolah.youtube} target="_blank" rel="noreferrer" className="text-white hover:text-gray-200 transition">
+                                        <YouTubeIcon />
+                                    </a>
+                                )}
+                                
+                                {/* LINK WHATSAPP DENGAN FORMAT BENAR */}
+                                {sekolah.no_hp && (
+                                    <a href={whatsappLink} target="_blank" rel="noreferrer" className="text-white hover:text-gray-200 transition">
+                                        <WhatsappIcon />
+                                    </a>
+                                )}
                             </div>
                         </div>
                     </motion.div>
 
                     {/* KOLOM 2 & 3: MAP EMBED (Mengambil 2/3 bagian sisa) */}
-                    {/* Perhatikan class 'lg:col-span-2' agar mengambil sisa ruang */}
                     <div className="lg:col-span-2 bg-white rounded-2xl shadow-lg overflow-hidden h-full min-h-[450px]">
                         <iframe 
                             src={mapEmbedUrl} 

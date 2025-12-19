@@ -2,50 +2,46 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Pendaftar;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-
 
 class KelulusanController extends Controller
 {
     /**
-     * Menampilkan halaman form cek kelulusan.
+     * Menampilkan halaman Cek Kelulusan dan hasil pencarian.
      */
-    public function index()
+    public function index(Request $request)
     {
-        return Inertia::render('CekKelulusan');
-    }
+        $pendaftar = null;
+        $message = null;
 
-    /**
-     * Memeriksa status kelulusan berdasarkan nomor pendaftaran.
-     */
-    public function check(Request $request)
-    {
-        // Validasi input, harus diisi dan berupa teks
-        $request->validate([
-            'no_pendaftaran' => 'required|string',
+        // Cek apakah ada input 'no_pendaftaran' di URL (Query String)
+        if ($request->filled('no_pendaftaran')) {
+            // Cari data pendaftar berdasarkan nomor pendaftaran
+            $pendaftar = Pendaftar::where('no_pendaftaran', $request->no_pendaftaran)
+                ->select(
+                    'no_pendaftaran', 
+                    'nama', 
+                    'program_nama', 
+                    'status', 
+                    'program_jenis', 
+                    'tanggal_ujian'
+                )
+                ->first();
+
+            // Jika data tidak ditemukan, siapkan pesan error
+            if (!$pendaftar) {
+                $message = 'Nomor pendaftaran tidak ditemukan. Mohon periksa kembali.';
+            }
+        }
+
+        // PENTING: Render harus sesuai nama file React Anda ('CekKelulusan.jsx')
+        // Jangan gunakan 'Kelulusan/Index' jika file Anda bernama 'CekKelulusan.jsx'
+        return Inertia::render('CekKelulusan', [
+            'pendaftar' => $pendaftar,
+            'filters' => $request->only('no_pendaftaran'),
+            'message' => $message,
         ]);
-
-        $no_pendaftaran = $request->input('no_pendaftaran');
-
-        // --- SIMULASI DATABASE ---
-        // Di aplikasi nyata, Anda akan mencari data ini di database.
-        // Untuk sekarang, kita buat data palsu.
-        $lulus = ['RTQ2025001', 'RTQ2025003', 'RTQ2025005'];
-        $tidak_lulus = ['RTQ2025002', 'RTQ2025004'];
-        // --- AKHIR SIMULASI ---
-
-        if (in_array($no_pendaftaran, $lulus)) {
-            // Jika nomor ditemukan di array 'lulus', kirim pesan sukses
-            return back()->with('success', 'Selamat! Nomor Pendaftaran ' . $no_pendaftaran . ' dinyatakan LULUS.');
-        }
-
-        if (in_array($no_pendaftaran, $tidak_lulus)) {
-            // Jika nomor ditemukan di array 'tidak_lulus', kirim pesan error
-            return back()->with('error', 'Mohon maaf, Nomor Pendaftaran ' . $no_pendaftaran . ' dinyatakan TIDAK LULUS. Tetap semangat!');
-        }
-
-        // Jika nomor tidak ditemukan sama sekali
-        return back()->with('error', 'Nomor Pendaftaran ' . $no_pendaftaran . ' tidak ditemukan.');
     }
 }

@@ -4,14 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Models\Pendaftar;
 use App\Models\Program;
-use App\Models\Jadwal; 
+use App\Models\Jadwal;
+use App\Models\Cabang; // <--- PENTING: Import Model Cabang
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth; 
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Midtrans\Config;
 use Midtrans\Snap;
-use Illuminate\Support\Facades\Log;
-use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Barryvdh\DomPDF\Facade\Pdf; // Untuk PDF Template
 
 class FormulirController extends Controller
 {
@@ -19,18 +21,21 @@ class FormulirController extends Controller
 
     private function cekPendaftaranAktif($userId)
     {
+        // Logika: 
+        // 1. Belum Bayar -> Aktif
+        // 2. Lunas TAPI 'Tidak Lulus' -> Boleh daftar lagi (Dianggap tidak aktif)
+        // 3. Lulus / Verifikasi / Menunggu Hasil -> Aktif (Tidak boleh daftar baru)
         return Pendaftar::where('user_id', $userId)
             ->where(function ($query) {
                 $query->where('status_pembayaran', 'Belum Bayar')
                       ->orWhere(function ($q) {
                           $q->where('status_pembayaran', 'Lunas')
-                            ->whereNotIn('status', ['Lulus', 'Tidak Lulus']);
+                            ->where('status', '!=', 'Tidak Lulus'); 
                       });
             })
             ->first();
     }
 
-    // Helper: Ubah "s.d 22 Februari 2025" -> "2025-02-22"
     private function convertTanggalIndo($stringDate)
     {
         $bulanIndo = [
@@ -39,24 +44,19 @@ class FormulirController extends Controller
             'September' => '09', 'Oktober' => '10', 'November' => '11', 'Desember' => '12'
         ];
 
-        // 1. Bersihkan kata-kata seperti "s.d", "sampai", dll.
-        // Hanya sisakan angka dan huruf.
         $cleanString = preg_replace('/[^a-zA-Z0-9\s]/', '', $stringDate); 
         $parts = explode(' ', trim($cleanString)); 
 
-        // 2. Ambil 3 bagian TERAKHIR (Tanggal, Bulan, Tahun)
-        // Ini untuk mengantisipasi format "s d 22 Februari 2025" (5 kata) -> kita cuma butuh 3 terakhir
         if (count($parts) >= 3) {
-            $tahun = array_pop($parts);      // 2025
-            $bulanNama = array_pop($parts);  // Februari
-            $tanggal = array_pop($parts);    // 22
+            $tahun = array_pop($parts);
+            $bulanNama = array_pop($parts);
+            $tanggal = array_pop($parts);
             
             $bulan = isset($bulanIndo[$bulanNama]) ? $bulanIndo[$bulanNama] : '01';
             $tgl = str_pad($tanggal, 2, '0', STR_PAD_LEFT);
 
             return "$tahun-$bulan-$tgl";
         }
-
         return null;
     }
 
@@ -67,6 +67,9 @@ class FormulirController extends Controller
         $pendaftaranAktif = $this->cekPendaftaranAktif(Auth::id());
 
         if ($pendaftaranAktif) {
+            if ($pendaftaranAktif->status === 'Lulus') {
+                return redirect()->route('status.cek');
+            }
             return redirect()->route('status.cek')
                 ->with('error', 'Formulir Anda sedang berjalan. Harap selesaikan proses pendaftaran sebelumnya.');
         }
@@ -74,7 +77,14 @@ class FormulirController extends Controller
         $program = Program::where('slug', $program_slug)->first();
         if (!$program) abort(404);
 
-        return Inertia::render('Formulir', ['program' => $program]);
+        // --- PERBAIKAN DI SINI ---
+        // Ambil data cabang dari database untuk dropdown
+        $cabangs = Cabang::all();
+
+        return Inertia::render('Formulir', [
+            'program' => $program,
+            'cabangs' => $cabangs // <--- Kirim ke Frontend
+        ]);
     }
 
     public function store(Request $request)
@@ -89,7 +99,7 @@ class FormulirController extends Controller
             'umur' => 'required|integer|min:0',
             'jenis_kelamin' => 'required|string',
             'alamat' => 'required|string',
-            'cabang' => 'required|string|max:255',
+            'cabang' => 'required|string|max:255', // Pastikan tervalidasi
             'nama_orang_tua' => 'required|string|max:255',
             'program_nama' => 'required|string',
             'program_jenis' => 'required|string',
@@ -102,14 +112,21 @@ class FormulirController extends Controller
 
         $existingPendaftar = $this->cekPendaftaranAktif(Auth::id());
 
+        if ($existingPendaftar && $existingPendaftar->status === 'Lulus') {
+            return redirect()->route('status.cek');
+        }
+
         if ($existingPendaftar && $existingPendaftar->nik !== $request->nik) {
              return redirect()->route('status.cek')->with('error', 'Anda masih memiliki pendaftaran aktif dengan NIK lain.');
         }
 
         if (!$existingPendaftar) {
-            $nikExists = Pendaftar::where('nik', $request->nik)->exists();
+            $nikExists = Pendaftar::where('nik', $request->nik)
+                                  ->where('status', '!=', 'Tidak Lulus')
+                                  ->where('user_id', '!=', Auth::id())
+                                  ->exists();
             if ($nikExists) {
-                return redirect()->back()->withErrors(['nik' => 'NIK ini sudah terdaftar sebelumnya.']);
+                return redirect()->back()->withErrors(['nik' => 'NIK ini sudah terdaftar aktif.']);
             }
         }
 
@@ -172,7 +189,7 @@ class FormulirController extends Controller
         return redirect()->route('pembayaran.show', ['id' => $pendaftar->id]);
     }
     
-    // --- LOGIKA UTAMA: CEK STATUS & AUTO JADWAL CERDAS ---
+    // --- STATUS CHECK & AUTO SCHEDULE ---
     public function checkStatus()
     {
         $user = auth()->user();
@@ -183,27 +200,20 @@ class FormulirController extends Controller
             return redirect()->route('formulir.index')->with('error', 'Anda belum mendaftar.');
         }
 
+        $semuaJadwal = Jadwal::all();
+
         foreach ($pendaftarList as $pendaftar) {
-            
-            // 1. Cek Apakah Status Lunas?
             if ($pendaftar->status_pembayaran == 'Lunas') {
                 $updates = [];
 
-                // Auto Verifikasi
                 if ($pendaftar->status == 'Menunggu Verifikasi') {
                     $updates['status'] = 'Sudah Diverifikasi';
                 }
 
-                // 2. Cek Apakah Jadwal Masih Kosong? (Gunakan empty agar string kosong "" juga terdeteksi)
                 if (empty($pendaftar->tanggal_ujian)) {
-                    
-                    // --- LOGIKA CARI JADWAL ---
-                    $semuaJadwal = Jadwal::all();
                     $tanggalDipilih = null;
-
                     foreach ($semuaJadwal as $jadwal) {
                         $tahapan = is_string($jadwal->tahapan) ? json_decode($jadwal->tahapan, true) : $jadwal->tahapan;
-                        
                         $batasPendaftaran = null;
                         $tglTesMasuk = null;
 
@@ -219,34 +229,21 @@ class FormulirController extends Controller
                                 }
                             }
                         }
-
-                        // Jika hari ini <= batas pendaftaran, pilih jadwal ini
                         if ($batasPendaftaran && $tglTesMasuk && now()->toDateString() <= $batasPendaftaran) {
                             $tanggalDipilih = $tglTesMasuk;
                             break; 
                         }
                     }
-
-                    // Fallback default
                     $updates['tanggal_ujian'] = $tanggalDipilih ?: now()->addDays(3)->toDateString();
                     $updates['waktu_ujian'] = '08:00'; 
                     $updates['lokasi_ujian'] = 'Gedung Utama RTQ Al-Yusra';
-                    
-                    // --- DEBUGGING SEMENTARA (HAPUS NANTI) ---
-                    // Kode ini akan mematikan aplikasi dan menampilkan data yang mau disimpan.
-                    // Jika layar Anda putih tulisan hitam berisi array, berarti logika BERJALAN.
-                    // Jika tidak muncul apa-apa (langsung masuk web), berarti logika ini DILEWATI.
-                     //dd('LOGIKA BERJALAN', $updates); 
                 }
-
-                // Eksekusi Update
                 if (!empty($updates)) {
                     Pendaftar::where('id', $pendaftar->id)->update($updates);
                 }
             }
         }
 
-        // Ambil data fresh untuk ditampilkan
         $pendaftarListFresh = Pendaftar::where('user_id', $user->id)
                                   ->orderBy('created_at', 'desc')
                                   ->get();
@@ -254,10 +251,136 @@ class FormulirController extends Controller
         foreach ($pendaftarListFresh as $pendaftar) {
             $programData = Program::where('nama', $pendaftar->program_nama)->first();
             $pendaftar->materi_ujian_program = $programData ? $programData->materi_ujian : null;
+
+            $tanggalPengumumanFound = null;
+            if ($pendaftar->tanggal_ujian) {
+                foreach ($semuaJadwal as $jadwal) {
+                    $tahapan = is_string($jadwal->tahapan) ? json_decode($jadwal->tahapan, true) : $jadwal->tahapan;
+                    $tglTesDiJadwal = null;
+                    $tglPengumumanDiJadwal = null;
+
+                    if (is_array($tahapan)) {
+                        foreach ($tahapan as $item) {
+                            if (isset($item['title'])) {
+                                if (stripos($item['title'], 'Tes Masuk') !== false) {
+                                    $tglTesDiJadwal = $this->convertTanggalIndo($item['date']);
+                                }
+                                if (stripos($item['title'], 'Pengumuman') !== false) {
+                                    $tglPengumumanDiJadwal = $item['date'];
+                                }
+                            }
+                        }
+                    }
+                    if ($tglTesDiJadwal && $tglTesDiJadwal == $pendaftar->tanggal_ujian) {
+                        $tanggalPengumumanFound = $tglPengumumanDiJadwal;
+                        break; 
+                    }
+                }
+            }
+            $pendaftar->tanggal_pengumuman_display = $tanggalPengumumanFound ?: 'Jadwal Menyusul';
         }
 
         return Inertia::render('StatusPendaftaran', [
             'pendaftarList' => $pendaftarListFresh,
         ]);
+    }
+
+    // --- DAFTAR ULANG ---
+
+    public function daftarUlangShow()
+    {
+        $user = Auth::user();
+        $pendaftar = Pendaftar::where('user_id', $user->id)->latest()->first();
+
+        if (!$pendaftar || $pendaftar->status !== 'Lulus') {
+            return redirect()->route('status.cek');
+        }
+
+        $jadwal = Jadwal::all();
+        $batasDaftarUlangDisplay = 'Segera';
+        $isExpired = false;
+
+        foreach ($jadwal as $j) {
+            $tahapan = is_string($j->tahapan) ? json_decode($j->tahapan, true) : $j->tahapan;
+            $isGelombangUser = false;
+            $tanggalDaftarUlangItem = null;
+
+            if (is_array($tahapan)) {
+                foreach ($tahapan as $item) {
+                    if (isset($item['title']) && stripos($item['title'], 'Tes Masuk') !== false) {
+                        $tglTes = $this->convertTanggalIndo($item['date']);
+                        if ($tglTes == $pendaftar->tanggal_ujian) {
+                            $isGelombangUser = true;
+                        }
+                    }
+                    if (isset($item['title']) && stripos($item['title'], 'Daftar Ulang') !== false) {
+                        $tanggalDaftarUlangItem = $item['date'];
+                    }
+                }
+            }
+            if ($isGelombangUser && $tanggalDaftarUlangItem) {
+                $batasDaftarUlangDisplay = $tanggalDaftarUlangItem;
+                $batasDate = $this->convertTanggalIndo($tanggalDaftarUlangItem);
+                if ($batasDate && now()->toDateString() > $batasDate) {
+                    $isExpired = true;
+                }
+                break;
+            }
+        }
+
+        return Inertia::render('DaftarUlang', [
+            'pendaftar' => $pendaftar,
+            'batasDaftarUlang' => $batasDaftarUlangDisplay,
+            'isExpired' => $isExpired
+        ]);
+    }
+
+    public function daftarUlangStore(Request $request)
+    {
+        $request->validate([
+            'surat_pernyataan' => 'required|file|mimes:pdf|max:2048', 
+            'check_pemeriksaan' => 'accepted'
+        ], [
+            'surat_pernyataan.mimes' => 'Format file harus berupa PDF.',
+            'check_pemeriksaan.accepted' => 'Anda harus menyetujui hasil pemeriksaan berkas.'
+        ]);
+
+        $user = Auth::user();
+        $pendaftar = Pendaftar::where('user_id', $user->id)->latest()->firstOrFail();
+
+        if ($request->hasFile('surat_pernyataan')) {
+            if ($pendaftar->surat_pernyataan) {
+                Storage::disk('public')->delete($pendaftar->surat_pernyataan);
+            }
+            $path = $request->file('surat_pernyataan')->store('berkas_daftar_ulang', 'public');
+            
+            $pendaftar->update([
+                'surat_pernyataan' => $path,
+                'status' => 'Sudah Daftar Ulang'
+            ]);
+        }
+
+        $user->update(['role' => 'wali_santri']); 
+
+        return redirect()->route('status.cek')->with('success', 'Alhamdulillah, proses daftar ulang berhasil!');
+    }
+
+    public function downloadTemplate()
+    {
+        $user = Auth::user();
+        $pendaftar = Pendaftar::where('user_id', $user->id)->latest()->first();
+
+        if (!$pendaftar) {
+            return redirect()->back()->with('error', 'Data pendaftaran tidak ditemukan.');
+        }
+
+        $pdf = Pdf::loadView('pdf.surat_pernyataan', [
+            'pendaftar' => $pendaftar,
+            'tanggal_cetak' => now()->translatedFormat('d F Y')
+        ]);
+
+        $pdf->setPaper('a4', 'portrait');
+
+        return $pdf->download('Surat_Pernyataan_' . str_replace(' ', '_', $pendaftar->nama) . '.pdf');
     }
 }

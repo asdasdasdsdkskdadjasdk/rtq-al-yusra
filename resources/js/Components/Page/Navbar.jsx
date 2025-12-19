@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react'; // Tambahkan usePage
 import { motion, useScroll, useMotionValueEvent } from 'framer-motion';
 
 // --- 1. KOMPONEN DROPDOWN (TETAP SAMA) ---
@@ -65,7 +65,11 @@ const NavItemWithDropdown = ({ item, auth, isScrolled, initialTextColor }) => {
 };
 
 // --- 2. KOMPONEN UTAMA NAVBAR ---
-export default function Navbar({ auth, heroTheme}) {
+export default function Navbar({ heroTheme }) { // Hapus 'auth' dari props sini, kita ambil dari usePage
+    
+    // 1. AMBIL DATA DARI GLOBAL PROPS (Agar konsisten di semua halaman)
+    const { auth } = usePage().props; 
+    
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [hidden, setHidden] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false); 
@@ -73,7 +77,7 @@ export default function Navbar({ auth, heroTheme}) {
 
     // Setup Tampilan
     const initialTextColor = heroTheme === 'light' ? 'text-gray-700' : 'text-white';
-    const initialLogo = heroTheme === 'light' ? '/images/logo6.png' : '/images/logo6.png'; 
+    const initialLogo = '/images/logo6.png'; // Sesuaikan path logo Anda
     const scrolledLogo = '/images/logo6.png'; 
 
     useMotionValueEvent(scrollY, "change", (latest) => {
@@ -85,15 +89,17 @@ export default function Navbar({ auth, heroTheme}) {
     });
 
     // ==========================================
-    // LOGIKA PENAMBAHAN MENU (TANPA MENGHAPUS YANG LAMA)
+    // LOGIKA PENAMBAHAN MENU
     // ==========================================
+    
+    // Cek apakah data pendaftar tersedia di user object
     const pendaftar = auth?.user?.pendaftar;
     
     // 1. Menu Dasar (Selalu Ada)
     const baseLinks = [
         { href: route('home'), text: 'Beranda' },
         { 
-            text: 'Pendaftaran', // Dropdown ini TETAP ADA
+            text: 'Pendaftaran', 
             submenu: [ 
                 { href: route('pendaftaran'), text: 'Formulir' }, 
                 { href: route('jadwal'), text: 'Jadwal' }, 
@@ -102,33 +108,45 @@ export default function Navbar({ auth, heroTheme}) {
         },
     ];
 
-    // 2. Menu Tambahan (Jika user punya formulir)
+    // 2. Menu Tambahan (Jika User Login)
     let statusLink = null;
-    if (auth?.user && pendaftar) {
-        if (pendaftar.status_pembayaran !== 'Lunas') {
-            // Jika belum bayar -> Tambah menu Bayar
-            statusLink = { 
-                href: route('pembayaran.show', pendaftar.id), 
-                text: 'Bayar Tagihan',
-                //customColor: 'text-yellow-500 font-bold hover:text-yellow-600'
-            };
+    
+    if (auth?.user) {
+        if (pendaftar) {
+            // Jika data pendaftar ada, cek status pembayaran
+            if (pendaftar.status_pembayaran !== 'Lunas') {
+                statusLink = { 
+                    href: route('pembayaran.show', pendaftar.id), 
+                    text: 'Bayar Tagihan',
+                    customColor: 'text-yellow-400 font-bold hover:text-yellow-300' // Opsional: Beri highlight
+                };
+            } else {
+                statusLink = { 
+                    href: route('status.cek'), 
+                    text: 'Status Saya',
+                };
+            }
         } else {
-            // Jika sudah lunas -> Tambah menu Status
-            statusLink = { 
-                href: route('status.cek'), 
-                text: 'Status Saya',
-                //customColor: 'font-bold text-green-500 hover:text-green-600' // Warna opsional, bisa dihapus jika mau standar
+            // FALLBACK PENTING:
+            // Jika user login TAPI data pendaftar tidak terbawa (misal di halaman Kontak),
+            // Default arahkan ke "Status Saya". Biar sistem di halaman itu yang redirect kalau belum daftar.
+            // Atau tampilkan menu "Daftar Baru" jika Anda mau. Di sini saya default ke Status.
+            statusLink = {
+                href: route('status.cek'),
+                text: 'Status Saya'
             };
         }
     }
 
     // 3. Gabungkan Semua Menu
     const navLinks = [
-        ...baseLinks, // Masukkan menu dasar
-        ...(statusLink ? [statusLink] : []), // Sisipkan menu status (jika ada) di tengah
+        ...baseLinks, 
+        ...(statusLink ? [statusLink] : []), 
         { href: route('berita.index'), text: 'Berita' },
-        { href: route('kelulusan.index'), text: 'Cek Kelulusan', authOnly: true },
-        { href: route('kontak'), text: 'Kontak kami' },
+        // Menu Cek Kelulusan hanya muncul jika BELUM login (karena kalau login bisa lihat di Status Saya)
+        // Atau biarkan saja jika memang ingin selalu ada.
+        { href: route('kelulusan.index'), text: 'Cek Kelulusan', authOnly: false }, 
+        { href: route('kontak'), text: 'Kontak Kami' },
     ];
 
     return (
@@ -175,7 +193,6 @@ export default function Navbar({ auth, heroTheme}) {
                                     key={link.text} 
                                     href={link.href} 
                                     className={`font-medium transition hover:text-alyusra-orange ${
-                                        // Gunakan customColor jika ada, jika tidak pakai warna standar scroll
                                         link.customColor 
                                             ? link.customColor 
                                             : (isScrolled ? 'text-gray-700' : initialTextColor)
@@ -194,7 +211,7 @@ export default function Navbar({ auth, heroTheme}) {
                             <>
                                 <span className={`font-semibold transition ${
                                     isScrolled ? 'text-gray-700' : initialTextColor 
-                                }`}>{auth.user.name}</span>
+                                }`}>{auth.user.name.split(' ')[0]}</span> {/* Ambil nama depan saja biar rapi */}
 
                                 <Link 
                                     href={route('logout')} 
@@ -233,7 +250,7 @@ export default function Navbar({ auth, heroTheme}) {
 
             {/* --- MOBILE MENU DROPDOWN --- */}
             <div className={`${isMobileMenuOpen ? 'block' : 'hidden'} md:hidden border-t ${isScrolled ? 'border-gray-200' : 'border-transparent'}`}> 
-                <div className={`px-2 pt-2 pb-3 space-y-1 sm:px-3 ${isScrolled ? 'bg-white/95 backdrop-blur-sm' : 'bg-alyusra-dark-blue/90 backdrop-blur-sm'}`}>
+                <div className={`px-2 pt-2 pb-3 space-y-1 sm:px-3 ${isScrolled ? 'bg-white/95 backdrop-blur-sm' : 'bg-gray-800/95 backdrop-blur-sm'}`}>
                     {navLinks.map((link) => (
                         (!link.authOnly || (link.authOnly && auth?.user)) && (
                             link.submenu ? (
@@ -261,7 +278,7 @@ export default function Navbar({ auth, heroTheme}) {
                                     key={link.text}
                                     href={link.href || '#'} 
                                     className={`block px-3 py-2 rounded-md text-base font-medium hover:text-alyusra-orange transition ${
-                                        link.customColor // Terapkan warna custom juga di mobile
+                                        link.customColor
                                             ? link.customColor
                                             : (isScrolled ? 'text-gray-700 hover:bg-gray-100' : 'text-white hover:bg-white/10')
                                     }`}
@@ -275,7 +292,7 @@ export default function Navbar({ auth, heroTheme}) {
                </div>
 
                 {/* Tombol Auth Mobile */}
-                <div className={`pt-4 pb-3 border-t ${isScrolled ? 'border-gray-200' : 'border-white/20'} px-5 ${isScrolled ? 'bg-white/95 backdrop-blur-sm' : 'bg-alyusra-dark-blue/90 backdrop-blur-sm'}`}>
+                <div className={`pt-4 pb-3 border-t ${isScrolled ? 'border-gray-200' : 'border-white/20'} px-5 ${isScrolled ? 'bg-white/95 backdrop-blur-sm' : 'bg-gray-800/95 backdrop-blur-sm'}`}>
                     {auth && auth.user ? (
                         <div className="flex items-center justify-between">
                             <span className={`font-semibold ${isScrolled ? 'text-gray-700' : 'text-white'}`}>{auth.user.name}</span>

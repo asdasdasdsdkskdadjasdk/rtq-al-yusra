@@ -1,8 +1,6 @@
-// resources/js/Layouts/AuthenticatedLayout.jsx
+import { Link, usePage } from '@inertiajs/react'; // 1. Tambahkan usePage
 
-import { Link } from '@inertiajs/react';
-
-// === Kumpulan Ikon untuk Sidebar ===
+// === Kumpulan Ikon untuk Sidebar (TETAP SAMA) ===
 const DashboardIcon = () => <svg className="w-6 h-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>;
 const PendaftaranIcon = () => <svg className="w-6 h-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>;
 const StatusLulusIcon = () => <svg className="w-6 h-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
@@ -13,8 +11,7 @@ const TestimoniIcon = () => <svg className="w-6 h-6 mr-3" fill="none" viewBox="0
 // --- TAMBAHAN IKON PROGRAM ---
 const ProgramIcon = () => <svg className="w-6 h-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>;
 
-
-// === Komponen NavLink ===
+// === Komponen NavLink (TETAP SAMA) ===
 const NavLink = ({ href, active, children }) => (
     <Link
         href={href}
@@ -24,36 +21,39 @@ const NavLink = ({ href, active, children }) => (
     </Link>
 );
 
-
-// === DATASTRUKTUR MENU BERDASARKAN PERAN ===
+// === DATASTRUKTUR MENU (TETAP SAMA) ===
 const navigationMenu = {
     PSB: [ 
-        { name: 'Dasboard', href: route('dashboard'), icon: DashboardIcon, current: 'dashboard' },
-        { name: 'Data Pendaftar', href: route('psb.pendaftaran.index'), icon: PendaftaranIcon, current: 'psb.pendaftaran.index' }, // Saya perjelas namanya
-        
-        // --- TAMBAHAN MENU PROGRAM ---
+        { name: 'Dashboard', href: route('dashboard'), icon: DashboardIcon, current: 'dashboard' }, // Typo 'Dasboard' diperbaiki jadi 'Dashboard'
+        { name: 'Data Pendaftar', href: route('psb.pendaftaran.index'), icon: PendaftaranIcon, current: 'psb.pendaftaran.index' },
         { name: 'Manajemen Program', href: route('admin.program.index'), icon: ProgramIcon, current: 'admin.program.*' },
-
         { name: 'Pengaturan Jadwal', href: route('admin.jadwal.index'), icon: PengaturanJadwalIcon, current: 'admin.jadwal.*' },
         { name: 'Biaya Pendidikan', href: route('admin.biaya.index'), icon: KeuanganIcon, current: 'admin.biaya.*' },
         { name: 'Berita & Info', href: route('admin.berita.index'), icon: BeritaIcon, current: 'admin.berita.*' },
         { name: 'Testimoni', href: route('admin.testimonial.index'), icon: TestimoniIcon, current: 'admin.testimonial.*' },
-        // Menu non-aktif (sementara)
-        // { name: 'Status Lulus', href: '#', icon: StatusLulusIcon, current: 'status.lulus' },
+        { name: 'Setting', href: route('admin.settings.index'), icon: TestimoniIcon, current: 'admin.settings.*' },
     ],
     keuangan: [
-        { name: 'Dasboard', href: route('dashboard'), icon: DashboardIcon, current: 'dashboard' },
+        { name: 'Dashboard', href: route('dashboard'), icon: DashboardIcon, current: 'dashboard' },
         { name: 'Laporan Keuangan', href: '#', icon: KeuanganIcon, current: 'laporan.keuangan' },
     ],
     wali_santri: [
-        { name: 'Dasboard', href: route('dashboard'), icon: DashboardIcon, current: 'dashboard' },
+        { name: 'Dashboard', href: route('dashboard'), icon: DashboardIcon, current: 'dashboard' },
         { name: 'Lihat Status Anak', href: '#', icon: StatusLulusIcon, current: 'status' },
     ],
 };
 
-
-export default function Authenticated({ auth, children }) {
-    const userRole = auth.user?.role ?? 'wali_santri';
+// === COMPONENT UTAMA (PERBAIKAN LOGIC PENGAMBILAN DATA) ===
+// Kita hapus 'auth' dari props, biar layout ngambil sendiri dari usePage
+export default function Authenticated({ children }) {
+    
+    // 2. AMBIL DATA GLOBAL PAKE USEPAGE (SOLUSI FIX)
+    const { auth } = usePage().props;
+    
+    // Safety check: jika auth.user kosong (misal logout), pakai object kosong biar gak crash
+    const user = auth?.user || { name: 'Guest', role: 'wali_santri' };
+    const userRole = user.role ?? 'wali_santri';
+    
     const navLinks = navigationMenu[userRole] || [];
 
     return (
@@ -61,7 +61,8 @@ export default function Authenticated({ auth, children }) {
             <aside className="w-64 bg-white shadow-lg flex flex-col">
                 <div className="flex flex-col items-center p-6 border-b">
                     <img src="/images/logo.png" alt="Logo" className="w-24 h-24 mb-4" />
-                    <h4 className="font-bold text-lg text-alyusra-dark-blue">{auth.user?.name ?? 'Guest'}</h4>
+                    {/* Menggunakan variabel 'user' lokal */}
+                    <h4 className="font-bold text-lg text-alyusra-dark-blue">{user.name}</h4>
                     <p className="text-sm text-gray-500 capitalize">{userRole.replace('_', ' ')}</p>
                 </div>
 
@@ -89,7 +90,7 @@ export default function Authenticated({ auth, children }) {
             <div className="flex-1 flex flex-col">
                 <main className="flex-1 p-6 lg:p-10">{children}</main>
                 <footer className="text-center py-4 text-sm text-gray-500">
-                    Powered by RTQ Al-Yusra &copy; {new Date().getFullYear()} KANAGEM
+                    Powered by RTQ Al-Yusra &copy; {new Date().getFullYear()} 1KANASEM
                 </footer>
             </div>
         </div>

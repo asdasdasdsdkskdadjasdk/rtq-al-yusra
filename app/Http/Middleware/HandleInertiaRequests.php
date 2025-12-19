@@ -4,6 +4,8 @@ namespace App\Http\Middleware;
 
 use Illuminate\Http\Request;
 use Inertia\Middleware;
+use App\Models\Setting; // Tambahkan ini
+
 
 class HandleInertiaRequests extends Middleware
 {
@@ -31,6 +33,8 @@ class HandleInertiaRequests extends Middleware
 
 public function share(Request $request): array
 {
+
+    $settings = Setting::all()->pluck('value', 'key')->toArray();
     return [
         ...parent::share($request),
         'auth' => [
@@ -48,6 +52,7 @@ public function share(Request $request): array
                 'location' => $request->url(),
             ],
         // ...
+        'sekolah' => $settings,
     ];
 }
 }

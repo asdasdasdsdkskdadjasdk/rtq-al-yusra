@@ -1,23 +1,20 @@
-// resources/js/Pages/Formulir.jsx
-
 import { Head, useForm } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import InputLabel from '@/Components/InputLabel';
 import TextInput from '@/Components/TextInput';
 import InputError from '@/Components/InputError';
 import PrimaryButton from '@/Components/PrimaryButton';
-// TIDAK ADA FRAMER MOTION yang diperlukan di sini
 
-// Komponen reusable untuk input file (tetap sama)
+// Komponen reusable untuk input file
 function FileInput({ label, name, onchange, error }) {
     return (
-        <div className="md:col-span-2"> {/* File input dibuat full width */}
+        <div className="md:col-span-2"> 
             <InputLabel htmlFor={name} value={label} />
             <input
                 id={name}
                 name={name}
                 type="file"
-                className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-alyusra-orange/10 file:text-alyusra-orange hover:file:bg-alyusra-orange/20"
+                className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
                 onChange={onchange}
             />
             <InputError message={error} className="mt-2" />
@@ -25,7 +22,7 @@ function FileInput({ label, name, onchange, error }) {
     );
 }
 
-export default function Formulir({ auth, program }) {
+export default function Formulir({ auth, program, cabangs }) { // <--- Props 'cabangs' diterima di sini
     const { data, setData, post, processing, errors, progress } = useForm({
         // Data program (hidden)
         program_nama: program.nama,
@@ -40,7 +37,7 @@ export default function Formulir({ auth, program }) {
         umur: '',
         jenis_kelamin: '',
         alamat: '',
-        cabang: '',
+        cabang: '', // Akan diisi dari dropdown
         // Data Wali
         nama_orang_tua: '',
         // Berkas
@@ -57,10 +54,10 @@ export default function Formulir({ auth, program }) {
     }
 
     return (
-        <AppLayout auth={auth} heroTheme="dark"> {/* 1. Set heroTheme="dark" untuk navbar putih */}
+        <AppLayout auth={auth} heroTheme="dark">
             <Head title={`Formulir ${program.nama}`} />
 
-            {/* 2. Hero Section dengan mt-[-80px] dan pt-32 untuk sejajar dengan Navbar */}
+            {/* Hero Section */}
             <div 
                 className="relative bg-gray-800 pb-20 mt-[-80px] overflow-hidden" 
                 style={{ 
@@ -70,22 +67,22 @@ export default function Formulir({ auth, program }) {
                     backgroundPosition: 'center' 
                 }}
             >
-                {/* Overlay Hitam Solid (tetap) */}
                 <div className="absolute inset-0 bg-black/70"></div>
                 
-                <div className="relative container mx-auto px-4 sm:px-6 lg:px-8 pt-32"> {/* Gunakan pt-32 di sini */}
+                <div className="relative container mx-auto px-4 sm:px-6 lg:px-8 pt-32">
                     <h1 className="text-4xl lg:text-5xl font-extrabold text-white text-center mb-6">Formulir Pendaftaran</h1>
                 </div>
-            {/* 3. Form Section (Di luar Hero, diangkat ke atas untuk visual yang lebih baik) */}
+            </div>
+
+            {/* Form Section */}
             <div className="relative container mx-auto px-4 sm:px-6 lg:px-8 -mt-16 z-20"> 
                 <form onSubmit={handleSubmit} className="max-w-4xl mx-auto bg-white p-8 md:p-12 rounded-2xl shadow-lg">
                     <div className="text-center mb-8 border-b pb-6">
-                        <p className="font-semibold text-alyusra-orange">{program.jenis}</p>
-                        <h2 className="text-3xl font-bold text-alyusra-dark-blue">{program.nama}</h2>
+                        <p className="font-semibold text-orange-500">{program.jenis}</p>
+                        <h2 className="text-3xl font-bold text-gray-800">{program.nama}</h2>
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Data Diri Section */}
                         {/* NIK */}
                         <div>
                             <InputLabel htmlFor="nik" value="NIK" />
@@ -138,18 +135,39 @@ export default function Formulir({ auth, program }) {
                             </select>
                             <InputError message={errors.jenis_kelamin} className="mt-2" />
                         </div>
+                        
                         {/* Alamat */}
                         <div className="md:col-span-2">
                             <InputLabel htmlFor="alamat" value="Alamat Lengkap" />
                             <textarea id="alamat" value={data.alamat} onChange={e => setData('alamat', e.target.value)} className="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" rows="3" required></textarea>
                             <InputError message={errors.alamat} className="mt-2" />
                         </div>
-                        {/* Cabang */}
+
+                        {/* --- UPDATE: PILIHAN CABANG DINAMIS --- */}
                         <div>
-                            <InputLabel htmlFor="cabang" value="Cabang" />
-                            <TextInput id="cabang" value={data.cabang} onChange={e => setData('cabang', e.target.value)} className="mt-1 block w-full" required />
+                            <InputLabel htmlFor="cabang" value="Pilih Cabang" />
+                            <select
+                                id="cabang"
+                                value={data.cabang}
+                                onChange={(e) => setData('cabang', e.target.value)}
+                                className="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
+                                required
+                            >
+                                <option value="">-- Pilih Lokasi Cabang --</option>
+                                {/* Mapping data cabang dari props */}
+                                {cabangs && cabangs.length > 0 ? (
+                                    cabangs.map((c) => (
+                                        <option key={c.id} value={c.nama}>
+                                            {c.nama}
+                                        </option>
+                                    ))
+                                ) : (
+                                    <option value="Pusat">Pusat (Default)</option>
+                                )}
+                            </select>
                             <InputError message={errors.cabang} className="mt-2" />
                         </div>
+
                         {/* Nama Orang Tua */}
                         <div>
                             <InputLabel htmlFor="nama_orang_tua" value="Nama Orang Tua / Wali" />
@@ -159,7 +177,7 @@ export default function Formulir({ auth, program }) {
                         
                         {/* Berkas Section */}
                         <div className="md:col-span-2 mt-4">
-                            <h3 className="text-xl font-bold text-alyusra-dark-blue border-b pb-2 mb-4">Berkas Pendukung</h3>
+                            <h3 className="text-xl font-bold text-gray-800 border-b pb-2 mb-4">Berkas Pendukung</h3>
                         </div>
                         <FileInput label="Upload Ijazah Terakhir" name="ijazah_terakhir" error={errors.ijazah_terakhir} onchange={e => setData('ijazah_terakhir', e.target.files[0])} />
                         <FileInput label="Upload Kartu Keluarga" name="kartu_keluarga" error={errors.kartu_keluarga} onchange={e => setData('kartu_keluarga', e.target.files[0])} />
@@ -170,21 +188,19 @@ export default function Formulir({ auth, program }) {
                     
                     {progress && (
                         <div className="w-full bg-gray-200 rounded-full mt-6">
-                            <div className="bg-alyusra-green text-xs font-medium text-blue-100 text-center p-0.5 leading-none rounded-full" style={{ width: `${progress.percentage}%` }}>
+                            <div className="bg-green-600 text-xs font-medium text-blue-100 text-center p-0.5 leading-none rounded-full" style={{ width: `${progress.percentage}%` }}>
                                 {progress.percentage}%
                             </div>
                         </div>
                     )}
 
                     <div className="flex justify-end mt-8">
-                        <PrimaryButton className="bg-alyusra-green hover:bg-opacity-90" disabled={processing}>
+                        <PrimaryButton className="bg-orange-600 hover:bg-orange-700" disabled={processing}>
                             {processing ? 'Mengirim...' : 'Kirim Formulir'}
                         </PrimaryButton>
                     </div>
                 </form>
             </div>
-            </div>
-            
             
             <div className="pb-16"></div> {/* Padding bottom untuk footer */}
         </AppLayout>
