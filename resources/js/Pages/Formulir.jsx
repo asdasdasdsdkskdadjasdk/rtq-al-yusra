@@ -5,8 +5,8 @@ import TextInput from '@/Components/TextInput';
 import InputError from '@/Components/InputError';
 import PrimaryButton from '@/Components/PrimaryButton';
 
-// Komponen reusable untuk input file
-function FileInput({ label, name, onchange, error }) {
+// Komponen reusable untuk input file (Diperbarui dengan required & accept)
+function FileInput({ label, name, onchange, error, required = false }) {
     return (
         <div className="md:col-span-2"> 
             <InputLabel htmlFor={name} value={label} />
@@ -14,15 +14,19 @@ function FileInput({ label, name, onchange, error }) {
                 id={name}
                 name={name}
                 type="file"
-                className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
+                // Menerima PDF dan Gambar (sesuai validasi backend)
+                accept=".pdf,.jpg,.jpeg,.png" 
+                className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 cursor-pointer"
                 onChange={onchange}
+                required={required} // <--- Atribut Required ditambahkan
             />
+            <p className="text-xs text-gray-500 mt-1">* Wajib PDF / JPG / PNG (Maks. 2MB)</p>
             <InputError message={error} className="mt-2" />
         </div>
     );
 }
 
-export default function Formulir({ auth, program, cabangs }) { // <--- Props 'cabangs' diterima di sini
+export default function Formulir({ auth, program, cabangs }) { 
     const { data, setData, post, processing, errors, progress } = useForm({
         // Data program (hidden)
         program_nama: program.nama,
@@ -37,7 +41,7 @@ export default function Formulir({ auth, program, cabangs }) { // <--- Props 'ca
         umur: '',
         jenis_kelamin: '',
         alamat: '',
-        cabang: '', // Akan diisi dari dropdown
+        cabang: '', 
         // Data Wali
         nama_orang_tua: '',
         // Berkas
@@ -143,7 +147,7 @@ export default function Formulir({ auth, program, cabangs }) { // <--- Props 'ca
                             <InputError message={errors.alamat} className="mt-2" />
                         </div>
 
-                        {/* --- UPDATE: PILIHAN CABANG DINAMIS --- */}
+                        {/* Pilihan Cabang */}
                         <div>
                             <InputLabel htmlFor="cabang" value="Pilih Cabang" />
                             <select
@@ -154,7 +158,6 @@ export default function Formulir({ auth, program, cabangs }) { // <--- Props 'ca
                                 required
                             >
                                 <option value="">-- Pilih Lokasi Cabang --</option>
-                                {/* Mapping data cabang dari props */}
                                 {cabangs && cabangs.length > 0 ? (
                                     cabangs.map((c) => (
                                         <option key={c.id} value={c.nama}>
@@ -177,13 +180,45 @@ export default function Formulir({ auth, program, cabangs }) { // <--- Props 'ca
                         
                         {/* Berkas Section */}
                         <div className="md:col-span-2 mt-4">
-                            <h3 className="text-xl font-bold text-gray-800 border-b pb-2 mb-4">Berkas Pendukung</h3>
+                            <h3 className="text-xl font-bold text-gray-800 border-b pb-2 mb-4">Berkas Pendukung (Wajib)</h3>
                         </div>
-                        <FileInput label="Upload Ijazah Terakhir" name="ijazah_terakhir" error={errors.ijazah_terakhir} onchange={e => setData('ijazah_terakhir', e.target.files[0])} />
-                        <FileInput label="Upload Kartu Keluarga" name="kartu_keluarga" error={errors.kartu_keluarga} onchange={e => setData('kartu_keluarga', e.target.files[0])} />
-                        <FileInput label="Upload Pas Foto" name="pas_foto" error={errors.pas_foto} onchange={e => setData('pas_foto', e.target.files[0])} />
-                        <FileInput label="Upload Surat Keterangan Berkelakuan Baik (Sekolah)" name="skbb" error={errors.skbb} onchange={e => setData('skbb', e.target.files[0])} />
-                        <FileInput label="Upload Surat Keterangan Sehat (Rumah Sakit)" name="sks" error={errors.sks} onchange={e => setData('sks', e.target.files[0])} />
+                        
+                        {/* SEMUA FILE DIBAWAH INI DIBERI PROPS 'required' */}
+                        <FileInput 
+                            label="Upload Ijazah Terakhir" 
+                            name="ijazah_terakhir" 
+                            error={errors.ijazah_terakhir} 
+                            onchange={e => setData('ijazah_terakhir', e.target.files[0])} 
+                            required 
+                        />
+                        <FileInput 
+                            label="Upload Kartu Keluarga" 
+                            name="kartu_keluarga" 
+                            error={errors.kartu_keluarga} 
+                            onchange={e => setData('kartu_keluarga', e.target.files[0])} 
+                            required 
+                        />
+                        <FileInput 
+                            label="Upload Pas Foto" 
+                            name="pas_foto" 
+                            error={errors.pas_foto} 
+                            onchange={e => setData('pas_foto', e.target.files[0])} 
+                            required 
+                        />
+                        <FileInput 
+                            label="Upload Surat Keterangan Berkelakuan Baik (Sekolah)" 
+                            name="skbb" 
+                            error={errors.skbb} 
+                            onchange={e => setData('skbb', e.target.files[0])} 
+                            required 
+                        />
+                        <FileInput 
+                            label="Upload Surat Keterangan Sehat (Rumah Sakit)" 
+                            name="sks" 
+                            error={errors.sks} 
+                            onchange={e => setData('sks', e.target.files[0])} 
+                            required 
+                        />
                     </div>
                     
                     {progress && (
@@ -202,7 +237,7 @@ export default function Formulir({ auth, program, cabangs }) { // <--- Props 'ca
                 </form>
             </div>
             
-            <div className="pb-16"></div> {/* Padding bottom untuk footer */}
+            <div className="pb-16"></div> 
         </AppLayout>
     );
 }

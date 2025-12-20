@@ -18,6 +18,10 @@ use App\Http\Controllers\AdminProgramController;
 use App\Http\Controllers\AdminTestimonialController;
 use App\Http\Controllers\AdminSettingController; 
 use App\Http\Controllers\DashboardController; // <--- 1. Import Controller
+use App\Http\Controllers\SppController; // <--- WAJIB DITAMBAHKAN
+use App\Http\Controllers\AdminKeuanganController; // <--- Import ini
+use App\Http\Controllers\AdminUangMasukController;
+use App\Http\Controllers\WaliUangMasukController;
 
 /*
 |--------------------------------------------------------------------------
@@ -101,6 +105,14 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     Route::resource('berita', AdminBeritaController::class)->names('admin.berita');
     Route::resource('program', AdminProgramController::class)->names('admin.program');
     Route::resource('testimonial', AdminTestimonialController::class)->names('admin.testimonial');
+
+    Route::get('/spp', [SppController::class, 'index'])->name('spp.index');
+    Route::post('/spp', [SppController::class, 'store'])->name('spp.store');
+    // --- ADMIN KEUANGAN ---
+Route::get('/admin/keuangan', [AdminKeuanganController::class, 'index'])->name('admin.keuangan.index');
+Route::post('/admin/keuangan/spp/{id}/verify', [AdminKeuanganController::class, 'verifySpp'])->name('admin.keuangan.verify');
+
+
 });
 
 require __DIR__.'/auth.php';

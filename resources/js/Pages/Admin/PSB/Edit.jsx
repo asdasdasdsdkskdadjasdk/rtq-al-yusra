@@ -1,10 +1,11 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm, Link, router } from '@inertiajs/react';
+import { Head, useForm, Link } from '@inertiajs/react';
 
-export default function Edit({ auth, pendaftar }) {
+// 1. Terima props 'programs' dan 'cabangs'
+export default function Edit({ auth, pendaftar, programs, cabangs }) {
     
     const { data, setData, post, processing, errors } = useForm({
-        _method: 'PUT', // Trick agar bisa upload file di mode Update
+        _method: 'PUT',
         status: pendaftar.status || '',
         
         // Data Diri
@@ -23,7 +24,7 @@ export default function Edit({ auth, pendaftar }) {
         program_nama: pendaftar.program_nama || '',
         program_jenis: pendaftar.program_jenis || '',
 
-        // File (Biarkan null awalnya, hanya diisi jika user upload baru)
+        // File
         ijazah_terakhir: null,
         kartu_keluarga: null,
         pas_foto: null,
@@ -33,16 +34,13 @@ export default function Edit({ auth, pendaftar }) {
 
     const submit = (e) => {
         e.preventDefault();
-        // Gunakan post karena ada file upload, tapi method spoofing PUT sudah ada di data._method
         post(route('psb.pendaftaran.update', pendaftar.id));
     };
 
-    // Helper input file
+    // Helper input file (Tetap sama)
     const FileInput = ({ label, fieldName, currentFile }) => (
         <div className="border p-4 rounded-lg bg-gray-50">
             <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
-            
-            {/* Tampilkan file saat ini jika ada */}
             {currentFile && (
                 <div className="mb-3 text-xs">
                     <span className="text-gray-500">File Saat Ini: </span>
@@ -51,7 +49,6 @@ export default function Edit({ auth, pendaftar }) {
                     </a>
                 </div>
             )}
-
             <input
                 type="file"
                 onChange={(e) => setData(fieldName, e.target.files[0])}
@@ -80,6 +77,7 @@ export default function Edit({ auth, pendaftar }) {
                             value={data.status}
                             onChange={(e) => setData('status', e.target.value)}
                             className="w-full border-blue-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-3"
+                            required
                         >
                             <option value="Menunggu Verifikasi">Menunggu Verifikasi</option>
                             <option value="Sudah Diverifikasi">Sudah Diverifikasi</option>
@@ -87,17 +85,16 @@ export default function Edit({ auth, pendaftar }) {
                             <option value="Lulus">Lulus</option>
                             <option value="Tidak Lulus">Tidak Lulus</option>
                         </select>
-                        {errors.status && <div className="text-red-500 text-sm mt-1">{errors.status}</div>}
                     </div>
 
-                    {/* SECTION 2: BIODATA */}
+                    {/* SECTION 2: BIODATA (Tetap sama, hanya dipersingkat untuk fokus) */}
                     <div>
                         <h3 className="text-lg font-bold text-gray-800 mb-4 border-l-4 border-orange-500 pl-3">Biodata Santri</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* ... Input Nama, NIK, dll Tetap Sama ... */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Nama Lengkap</label>
-                                <input type="text" value={data.nama} onChange={(e) => setData('nama', e.target.value)} className="mt-1 w-full border-gray-300 rounded-lg shadow-sm" />
-                                {errors.nama && <div className="text-red-500 text-sm mt-1">{errors.nama}</div>}
+                                <input type="text" value={data.nama} onChange={(e) => setData('nama', e.target.value)} className="mt-1 w-full border-gray-300 rounded-lg shadow-sm" required />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">NIK</label>
@@ -113,7 +110,7 @@ export default function Edit({ auth, pendaftar }) {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Jenis Kelamin</label>
-                                <select value={data.jenis_kelamin} onChange={(e) => setData('jenis_kelamin', e.target.value)} className="mt-1 w-full border-gray-300 rounded-lg shadow-sm">
+                                <select value={data.jenis_kelamin} onChange={(e) => setData('jenis_kelamin', e.target.value)} className="mt-1 w-full border-gray-300 rounded-lg shadow-sm" required>
                                     <option value="">Pilih</option>
                                     <option value="Laki-laki">Laki-laki</option>
                                     <option value="Perempuan">Perempuan</option>
@@ -121,11 +118,11 @@ export default function Edit({ auth, pendaftar }) {
                             </div>
                              <div>
                                 <label className="block text-sm font-medium text-gray-700">No HP</label>
-                                <input type="text" value={data.no_hp} onChange={(e) => setData('no_hp', e.target.value)} className="mt-1 w-full border-gray-300 rounded-lg shadow-sm" />
+                                <input type="text" value={data.no_hp} onChange={(e) => setData('no_hp', e.target.value)} className="mt-1 w-full border-gray-300 rounded-lg shadow-sm" required />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Email</label>
-                                <input type="email" value={data.email} onChange={(e) => setData('email', e.target.value)} className="mt-1 w-full border-gray-300 rounded-lg shadow-sm" />
+                                <input type="email" value={data.email} onChange={(e) => setData('email', e.target.value)} className="mt-1 w-full border-gray-300 rounded-lg shadow-sm" required />
                             </div>
                             <div className="md:col-span-2">
                                 <label className="block text-sm font-medium text-gray-700">Alamat Lengkap</label>
@@ -134,33 +131,65 @@ export default function Edit({ auth, pendaftar }) {
                         </div>
                     </div>
 
-                    {/* SECTION 3: PROGRAM & ORTU */}
+                    {/* SECTION 3: PROGRAM & ORTU (BAGIAN YANG DIUBAH) */}
                     <div>
                          <h3 className="text-lg font-bold text-gray-800 mb-4 border-l-4 border-orange-500 pl-3">Program & Orang Tua</h3>
                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            
+                            {/* 2. DROPDOWN PROGRAM DARI DATABASE */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Program</label>
-                                <input type="text" value={data.program_nama} onChange={(e) => setData('program_nama', e.target.value)} className="mt-1 w-full border-gray-300 rounded-lg shadow-sm" />
+                                <label className="block text-sm font-medium text-gray-700">Program <span className="text-red-500">*</span></label>
+                                <select
+                                    value={data.program_nama}
+                                    onChange={(e) => setData('program_nama', e.target.value)}
+                                    className="mt-1 w-full border-gray-300 rounded-lg shadow-sm"
+                                    required // Wajib isi
+                                >
+                                    <option value="">-- Pilih Program --</option>
+                                    {programs.map((prog) => (
+                                        <option key={prog.id} value={prog.nama}>
+                                            {prog.nama}
+                                        </option>
+                                    ))}
+                                </select>
+                                {errors.program_nama && <div className="text-red-500 text-sm mt-1">{errors.program_nama}</div>}
                             </div>
+
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Jenis Program (Reguler/Mukim)</label>
-                                <select value={data.program_jenis} onChange={(e) => setData('program_jenis', e.target.value)} className="mt-1 w-full border-gray-300 rounded-lg shadow-sm">
+                                <select value={data.program_jenis} onChange={(e) => setData('program_jenis', e.target.value)} className="mt-1 w-full border-gray-300 rounded-lg shadow-sm" required>
                                     <option value="Reguler">Reguler</option>
                                     <option value="Mukim">Mukim</option>
                                 </select>
                             </div>
+
+                            {/* 3. DROPDOWN CABANG DARI DATABASE */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Cabang Pilihan <span className="text-red-500">*</span></label>
+                                <select
+                                    value={data.cabang}
+                                    onChange={(e) => setData('cabang', e.target.value)}
+                                    className="mt-1 w-full border-gray-300 rounded-lg shadow-sm"
+                                    required // Wajib isi
+                                >
+                                    <option value="">-- Pilih Cabang --</option>
+                                    {cabangs.map((cbg) => (
+                                        <option key={cbg.id} value={cbg.nama}>
+                                            {cbg.nama}
+                                        </option>
+                                    ))}
+                                </select>
+                                {errors.cabang && <div className="text-red-500 text-sm mt-1">{errors.cabang}</div>}
+                            </div>
+
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Nama Orang Tua</label>
                                 <input type="text" value={data.nama_orang_tua} onChange={(e) => setData('nama_orang_tua', e.target.value)} className="mt-1 w-full border-gray-300 rounded-lg shadow-sm" />
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Cabang Pilihan</label>
-                                <input type="text" value={data.cabang} onChange={(e) => setData('cabang', e.target.value)} className="mt-1 w-full border-gray-300 rounded-lg shadow-sm" />
-                            </div>
                          </div>
                     </div>
 
-                    {/* SECTION 4: BERKAS (FILE UPLOAD) */}
+                    {/* SECTION 4: BERKAS (Tetap sama) */}
                     <div>
                         <h3 className="text-lg font-bold text-gray-800 mb-4 border-l-4 border-orange-500 pl-3">Update Berkas (Upload untuk mengganti)</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

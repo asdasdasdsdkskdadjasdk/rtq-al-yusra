@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Cabang; // <--- Import Model Cabang
+use App\Models\Program;
 class PsbController extends Controller
 {
     public function index(Request $request)
@@ -43,23 +44,47 @@ class PsbController extends Controller
     public function edit($id)
     {
         $pendaftar = Pendaftar::findOrFail($id);
-        return Inertia::render('Admin/PSB/Edit', ['pendaftar' => $pendaftar]);
+        
+        // 2. Ambil Data Master untuk Dropdown
+        $cabangs = Cabang::all();
+        $programs = Program::all();
+
+        return Inertia::render('Admin/PSB/Edit', [
+            'pendaftar' => $pendaftar,
+            'cabangs' => $cabangs,   // <--- Kirim ke Frontend
+            'programs' => $programs, // <--- Kirim ke Frontend
+        ]);
     }
 
     // --- LOGIKA UPDATE UTAMA ---
+    // --- LOGIKA UPDATE UTAMA (DIPERBAIKI) ---
     public function update(Request $request, $id)
     {
         $pendaftar = Pendaftar::findOrFail($id);
 
         // 1. Validasi
-        // Gunakan 'sometimes' agar validasi hanya berjalan jika field tersebut dikirim
+        // PENTING: Semua field yang hendak diupdate MESTI ada di sini.
+        // Jika tidak ada dalam array ini, Laravel akan membuangnya dari $validatedData.
         $rules = [
             'status' => 'required|string',
+            
+            // Data Diri
             'nama' => 'sometimes|required|string|max:255',
-            'nik' => 'sometimes|required|string|max:16',
+            'nik' => 'nullable|string|max:20', // Ubah max jika perlu
             'no_hp' => 'sometimes|required|string',
             'email' => 'sometimes|required|email',
-            // File validasi (nullable karena user mungkin tidak ganti file)
+            'tempat_lahir' => 'nullable|string',
+            'tanggal_lahir' => 'nullable|date',
+            'jenis_kelamin' => 'nullable|string',
+            'alamat' => 'nullable|string',
+
+            // Data Orang Tua & Program
+            'nama_orang_tua' => 'nullable|string',
+            'cabang' => 'nullable|string',
+            'program_nama' => 'nullable|string',
+            'program_jenis' => 'nullable|string',
+
+            // File validasi (nullable kerana user mungkin tidak ganti file)
             'ijazah_terakhir' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
             'kartu_keluarga' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
             'pas_foto' => 'nullable|file|mimes:jpg,jpeg,png|max:2048',

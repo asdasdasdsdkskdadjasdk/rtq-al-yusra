@@ -14,6 +14,7 @@ use Inertia\Inertia;
 use Midtrans\Config;
 use Midtrans\Snap;
 use Barryvdh\DomPDF\Facade\Pdf; // Untuk PDF Template
+use App\Models\UangMasuk;
 
 class FormulirController extends Controller
 {
@@ -89,6 +90,7 @@ class FormulirController extends Controller
 
     public function store(Request $request)
     {
+        // 1. Validasi Input (Tetap sama)
         $validatedData = $request->validate([
             'nik' => 'required|string|max:16', 
             'nama' => 'required|string|max:255',
@@ -99,7 +101,7 @@ class FormulirController extends Controller
             'umur' => 'required|integer|min:0',
             'jenis_kelamin' => 'required|string',
             'alamat' => 'required|string',
-            'cabang' => 'required|string|max:255', // Pastikan tervalidasi
+            'cabang' => 'required|string|max:255',
             'nama_orang_tua' => 'required|string|max:255',
             'program_nama' => 'required|string',
             'program_jenis' => 'required|string',
@@ -110,6 +112,7 @@ class FormulirController extends Controller
             'sks' => 'nullable|file|mimes:pdf,jpg,png,jpeg|max:2048',
         ]);
 
+        // 2. Cek Pendaftaran Aktif (Tetap sama)
         $existingPendaftar = $this->cekPendaftaranAktif(Auth::id());
 
         if ($existingPendaftar && $existingPendaftar->status === 'Lulus') {
@@ -122,9 +125,9 @@ class FormulirController extends Controller
 
         if (!$existingPendaftar) {
             $nikExists = Pendaftar::where('nik', $request->nik)
-                                  ->where('status', '!=', 'Tidak Lulus')
-                                  ->where('user_id', '!=', Auth::id())
-                                  ->exists();
+                                ->where('status', '!=', 'Tidak Lulus')
+                                ->where('user_id', '!=', Auth::id())
+                                ->exists();
             if ($nikExists) {
                 return redirect()->back()->withErrors(['nik' => 'NIK ini sudah terdaftar aktif.']);
             }
@@ -132,6 +135,7 @@ class FormulirController extends Controller
 
         $dataToSave = $validatedData;
 
+        // 3. Handle File Upload (Tetap sama)
         $filesToUpload = ['ijazah_terakhir', 'kartu_keluarga', 'pas_foto', 'skbb', 'sks'];
         foreach ($filesToUpload as $file) {
             if ($request->hasFile($file)) {
@@ -145,10 +149,24 @@ class FormulirController extends Controller
             }
         }
         
+        // 4. HITUNG BIAYA & LOGIKA GRATIS
         $program = Program::where('nama', $request->program_nama)->first();
         $biayaClean = $program ? preg_replace('/[^0-9]/', '', $program->biaya) : 300000;
-        $dataToSave['nominal_pembayaran'] = (int) $biayaClean; 
+        $nominal = (int) $biayaClean;
+        $dataToSave['nominal_pembayaran'] = $nominal;
 
+        // [LOGIKA BARU] Cek apakah Gratis (Rp 0)
+        if ($nominal <= 0) {
+            // Jika Gratis: Set status Lunas & Lewati proses pembayaran
+            $dataToSave['status_pembayaran'] = 'Lunas';
+        } else {
+            // Jika Berbayar: Set status Belum Bayar (untuk pendaftar baru)
+            if (!$existingPendaftar) {
+                $dataToSave['status_pembayaran'] = 'Belum Bayar';
+            }
+        }
+
+        // 5. Simpan / Update Database
         if ($existingPendaftar) {
             $existingPendaftar->update($dataToSave);
             $pendaftar = $existingPendaftar;
@@ -156,37 +174,47 @@ class FormulirController extends Controller
             $dataToSave['no_pendaftaran'] = 'RTQ-' . now()->format('Ymd') . '-' . strtoupper(substr(uniqid(), -4));
             $dataToSave['user_id'] = Auth::id(); 
             $dataToSave['status'] = 'Menunggu Verifikasi'; 
-            $dataToSave['status_pembayaran'] = 'Belum Bayar';
+            // status_pembayaran sudah diatur di poin 4
             $pendaftar = Pendaftar::create($dataToSave);
         }
 
-        // --- MIDTRANS ---
-        Config::$serverKey = config('midtrans.server_key');
-        Config::$isProduction = config('midtrans.is_production');
-        Config::$isSanitized = config('midtrans.is_sanitized');
-        Config::$is3ds = config('midtrans.is_3ds');
+        // 6. LOGIKA MIDTRANS (HANYA JIKA BERBAYAR)
+        if ($nominal > 0) {
+            // Konfigurasi Midtrans
+            Config::$serverKey = config('midtrans.server_key');
+            Config::$isProduction = config('midtrans.is_production');
+            Config::$isSanitized = config('midtrans.is_sanitized');
+            Config::$is3ds = config('midtrans.is_3ds');
 
-        if (empty($pendaftar->snap_token) || $pendaftar->nominal_pembayaran != $existingPendaftar?->nominal_pembayaran) {
-             $params = [
-                'transaction_details' => [
-                    'order_id' => $pendaftar->no_pendaftaran . '-' . time(), 
-                    'gross_amount' => (int) $pendaftar->nominal_pembayaran,
-                ],
-                'customer_details' => [
-                    'first_name' => $pendaftar->nama,
-                    'email' => $pendaftar->email,
-                    'phone' => $pendaftar->no_hp,
-                ],
-            ];
-            try {
-                $snapToken = Snap::getSnapToken($params);
-                $pendaftar->update(['snap_token' => $snapToken]);
-            } catch (\Exception $e) {
-                Log::error('Midtrans Error: ' . $e->getMessage());
+            // Generate Snap Token jika belum ada atau nominal berubah
+            if (empty($pendaftar->snap_token)) {
+                 $params = [
+                    'transaction_details' => [
+                        'order_id' => $pendaftar->no_pendaftaran . '-' . time(), 
+                        'gross_amount' => (int) $pendaftar->nominal_pembayaran,
+                    ],
+                    'customer_details' => [
+                        'first_name' => $pendaftar->nama,
+                        'email' => $pendaftar->email,
+                        'phone' => $pendaftar->no_hp,
+                    ],
+                ];
+                try {
+                    $snapToken = Snap::getSnapToken($params);
+                    $pendaftar->update(['snap_token' => $snapToken]);
+                } catch (\Exception $e) {
+                    Log::error('Midtrans Error: ' . $e->getMessage());
+                }
             }
-        }
 
-        return redirect()->route('pembayaran.show', ['id' => $pendaftar->id]);
+            // Redirect ke Halaman Pembayaran (JIKA BERBAYAR)
+            return redirect()->route('pembayaran.show', ['id' => $pendaftar->id]);
+        } 
+        
+        // 7. JIKA GRATIS -> LANGSUNG KE STATUS
+        else {
+            return redirect()->route('status.cek')->with('success', 'Pendaftaran berhasil dikirim (Gratis).');
+        }
     }
     
     // --- STATUS CHECK & AUTO SCHEDULE ---
@@ -206,9 +234,9 @@ class FormulirController extends Controller
             if ($pendaftar->status_pembayaran == 'Lunas') {
                 $updates = [];
 
-                if ($pendaftar->status == 'Menunggu Verifikasi') {
-                    $updates['status'] = 'Sudah Diverifikasi';
-                }
+                // if ($pendaftar->status == 'Menunggu Verifikasi') {
+                //     $updates['status'] = 'Sudah Diverifikasi';
+                // }
 
                 if (empty($pendaftar->tanggal_ujian)) {
                     $tanggalDipilih = null;
@@ -358,6 +386,10 @@ class FormulirController extends Controller
                 'surat_pernyataan' => $path,
                 'status' => 'Sudah Daftar Ulang'
             ]);
+            UangMasuk::firstOrCreate(
+    ['user_id' => $user->id],
+    ['total_tagihan' => 5000000, 'sudah_dibayar' => 0, 'status' => 'Belum Lunas'] // Contoh 5 Juta
+);
         }
 
         $user->update(['role' => 'wali_santri']); 

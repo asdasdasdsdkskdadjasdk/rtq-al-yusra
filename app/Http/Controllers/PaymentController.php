@@ -12,7 +12,14 @@ use Illuminate\Support\Facades\Log;
 class PaymentController extends Controller
 {
     public function show($id)
-    {
+{
+    $pendaftar = Pendaftar::findOrFail($id);
+
+    // PENGAMAN: Jika sudah lunas atau gratis, tidak perlu bayar lagi
+    if ($pendaftar->status_pembayaran == 'Lunas' || $pendaftar->status_pembayaran == 'Gratis') {
+        return redirect()->route('status.cek')
+            ->with('message', 'Pendaftaran ini gratis atau sudah dibayar.');
+    }
         // Cari pendaftar berdasarkan NIK
         // Jika data sudah dihapus (karena expire), ini akan otomatis return 404 (Not Found)
 $pendaftar = Pendaftar::findOrFail($id);
