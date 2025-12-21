@@ -9,42 +9,22 @@ class Pendaftar extends Model
 {
     use HasFactory;
 
-    protected $table = 'pendaftar';
+    protected $table = 'pendaftar'; // Pastikan nama tabel di database sesuai
 
-    protected $fillable = [
-        'nik',
-        'user_id',
-        'no_pendaftaran',
-        'program_nama',
-        'program_jenis',
-        'nama',
-        'no_hp',
-        'email',
-        'tempat_lahir',
-        'tanggal_lahir',
-        'umur',
-        'jenis_kelamin',
-        'alamat',
-        'cabang',
-        'nama_orang_tua',
-        
-        // Berkas
-        'ijazah_terakhir',
-        'kartu_keluarga',
-        'pas_foto',
-        'skbb',
-        'sks',
-        
-        // Status & Pembayaran
-        'status',
-        'nominal_pembayaran',
-        'status_pembayaran',
-        'snap_token',
+    // 1. Opsi Praktis: Izinkan semua kolom diisi (Mass Assignment)
+    // Ini mencegah error "Add [program_id] to fillable property"
+    protected $guarded = ['id']; 
 
-        // --- TAMBAHKAN KOLOM JADWAL DI SINI ---
-        'tanggal_ujian',
-        'waktu_ujian',
-        'lokasi_ujian',
-        'catatan_ujian',
-    ];
+    // Relasi ke User (Wali Santri)
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    // Relasi ke Program (Untuk ambil Harga & Nama Program)
+    public function program()
+    {
+        // Pastikan kolom 'program_id' ada di tabel 'pendaftar'
+        return $this->belongsTo(Program::class, 'program_id');
+    }
 }

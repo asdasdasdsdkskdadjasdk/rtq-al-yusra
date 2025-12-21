@@ -129,11 +129,7 @@ export default function Pembayaran({ auth, pendaftar, clientKey, qrCode }) {
                                     </div>
                                     <h3 className="text-lg font-bold text-green-700">Pembayaran Berhasil!</h3>
                                     <p className="text-gray-600 mt-2 text-sm">Pendaftaran Anda sedang diproses oleh admin.</p>
-                                    <Link href={route('dashboard')}>
-                                        <PrimaryButton className="mt-6 w-full justify-center">
-                                            Ke Dashboard Saya
-                                        </PrimaryButton>
-                                    </Link>
+                                    
                                 </div>
                             ) : (
                                 <div className="text-center w-full">

@@ -8,16 +8,21 @@ import SecondaryButton from '@/Components/SecondaryButton';
 import Checkbox from '@/Components/Checkbox';
 
 export default function Edit({ auth, program }) {
-    // Inisialisasi data dari props 'program'
     const { data, setData, put, processing, errors } = useForm({
         jenis: program.jenis,
         nama: program.nama,
         batas_pendaftaran: program.batas_pendaftaran,
         tes: program.tes,
         biaya: program.biaya,
+        
+        // --- DATA BARU (Load dari DB) ---
+        nominal_uang_masuk: program.nominal_uang_masuk || '',
+        nominal_spp: program.nominal_spp || '',
+        // --------------------------------
+
         color: program.color,
         featured: Boolean(program.featured),
-        details: program.details || [''], // Pastikan ada array
+        details: program.details || [''], 
     });
 
     const handleChange = (e) => {
@@ -31,18 +36,11 @@ export default function Edit({ auth, program }) {
         setData('details', newDetails);
     };
 
-    const addDetail = () => {
-        setData('details', [...data.details, '']);
-    };
-
-    const removeDetail = (index) => {
-        const newDetails = data.details.filter((_, i) => i !== index);
-        setData('details', newDetails);
-    };
+    const addDetail = () => setData('details', [...data.details, '']);
+    const removeDetail = (index) => setData('details', data.details.filter((_, i) => i !== index));
 
     const submit = (e) => {
         e.preventDefault();
-        // Menggunakan method PUT untuk update
         put(route('admin.program.update', program.id));
     };
 
@@ -58,7 +56,7 @@ export default function Edit({ auth, program }) {
                         
                         <form onSubmit={submit} className="space-y-6">
                             
-                            {/* Form Input sama persis dengan Create */}
+                            {/* Baris 1 */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <InputLabel htmlFor="jenis" value="Jenis Program" />
@@ -72,6 +70,7 @@ export default function Edit({ auth, program }) {
                                 </div>
                             </div>
 
+                            {/* Baris 2 */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <InputLabel htmlFor="batas_pendaftaran" value="Batas Pendaftaran" />
@@ -85,9 +84,28 @@ export default function Edit({ auth, program }) {
                                 </div>
                             </div>
 
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Baris 3: INPUT HARGA (PENTING) */}
+                            <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                                <h3 className="font-bold text-blue-800 mb-3">Pengaturan Harga (Sistem Pembayaran)</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <InputLabel htmlFor="nominal_uang_masuk" value="Nominal Uang Masuk (Rp)" />
+                                        <TextInput type="number" id="nominal_uang_masuk" name="nominal_uang_masuk" value={data.nominal_uang_masuk} onChange={handleChange} className="mt-1 block w-full" required />
+                                        <InputError message={errors.nominal_uang_masuk} className="mt-2" />
+                                    </div>
+                                    <div>
+                                        <InputLabel htmlFor="nominal_spp" value="Nominal SPP Bulanan (Rp)" />
+                                        <TextInput type="number" id="nominal_spp" name="nominal_spp" value={data.nominal_spp} onChange={handleChange} className="mt-1 block w-full" required />
+                                        <InputError message={errors.nominal_spp} className="mt-2" />
+                                    </div>
+                                </div>
+                                <p className="text-xs text-blue-600 mt-2">* Isi dengan angka 0 jika program ini GRATIS (Beasiswa).</p>
+                            </div>
+
+                            {/* Baris 4: Tampilan Kartu */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <InputLabel htmlFor="biaya" value="Biaya Pendaftaran" />
+                                    <InputLabel htmlFor="biaya" value="Label Biaya (Teks)" />
                                     <TextInput id="biaya" name="biaya" value={data.biaya} onChange={handleChange} className="mt-1 block w-full" required />
                                     <InputError message={errors.biaya} className="mt-2" />
                                 </div>
@@ -112,26 +130,13 @@ export default function Edit({ auth, program }) {
                                 <InputLabel value="Detail Persyaratan / Ketentuan" />
                                 {data.details.map((detail, index) => (
                                     <div key={index} className="flex gap-2 mb-2">
-                                        <TextInput 
-                                            value={detail} 
-                                            onChange={(e) => handleDetailChange(index, e.target.value)} 
-                                            className="block w-full" 
-                                            required 
-                                        />
+                                        <TextInput value={detail} onChange={(e) => handleDetailChange(index, e.target.value)} className="block w-full" required />
                                         {data.details.length > 1 && (
-                                            <button 
-                                                type="button" 
-                                                onClick={() => removeDetail(index)} 
-                                                className="bg-red-100 text-red-600 px-3 rounded hover:bg-red-200"
-                                            >
-                                                ✕
-                                            </button>
+                                            <button type="button" onClick={() => removeDetail(index)} className="bg-red-100 text-red-600 px-3 rounded hover:bg-red-200">✕</button>
                                         )}
                                     </div>
                                 ))}
-                                <button type="button" onClick={addDetail} className="mt-2 text-sm text-indigo-600 hover:text-indigo-800 font-medium">
-                                    + Tambah Poin
-                                </button>
+                                <button type="button" onClick={addDetail} className="mt-2 text-sm text-indigo-600 hover:text-indigo-800 font-medium">+ Tambah Poin</button>
                                 <InputError message={errors.details} className="mt-2" />
                             </div>
 

@@ -9,9 +9,6 @@ use Illuminate\Support\Str;
 
 class AdminProgramController extends Controller
 {
-    /**
-     * Menampilkan daftar program.
-     */
     public function index()
     {
         $programs = Program::latest()->get();
@@ -20,33 +17,31 @@ class AdminProgramController extends Controller
         ]);
     }
 
-    /**
-     * Menampilkan form tambah program.
-     */
     public function create()
     {
         return Inertia::render('Admin/Program/Create');
     }
 
-    /**
-     * Menyimpan program baru.
-     */
     public function store(Request $request)
     {
         $validated = $request->validate([
             'jenis' => 'required|string|max:255',
             'nama' => 'required|string|max:255',
-            // slug kita generate otomatis jika kosong
             'batas_pendaftaran' => 'required|string|max:255',
             'tes' => 'required|string|max:255',
-            'biaya' => 'required|string|max:255',
-            'color' => 'required|string|max:50', // Hex color
+            'biaya' => 'required|string|max:255', // Ini Text (Display)
+            
+            // --- INPUT BARU (NUMERIC) ---
+            'nominal_uang_masuk' => 'required|numeric|min:0',
+            'nominal_spp' => 'required|numeric|min:0',
+            // ----------------------------
+
+            'color' => 'required|string|max:50',
             'featured' => 'boolean',
-            'details' => 'required|array|min:1', // Harus array
-            'details.*' => 'required|string', // Isi array harus text
+            'details' => 'required|array|min:1',
+            'details.*' => 'required|string',
         ]);
 
-        // Buat slug otomatis dari nama
         $validated['slug'] = Str::slug($validated['nama']);
 
         Program::create($validated);
@@ -54,9 +49,6 @@ class AdminProgramController extends Controller
         return redirect()->route('admin.program.index')->with('success', 'Program berhasil ditambahkan');
     }
 
-    /**
-     * Menampilkan form edit program.
-     */
     public function edit(Program $program)
     {
         return Inertia::render('Admin/Program/Edit', [
@@ -64,9 +56,6 @@ class AdminProgramController extends Controller
         ]);
     }
 
-    /**
-     * Memperbarui data program.
-     */
     public function update(Request $request, Program $program)
     {
         $validated = $request->validate([
@@ -75,13 +64,18 @@ class AdminProgramController extends Controller
             'batas_pendaftaran' => 'required|string|max:255',
             'tes' => 'required|string|max:255',
             'biaya' => 'required|string|max:255',
+            
+            // --- INPUT BARU (NUMERIC) ---
+            'nominal_uang_masuk' => 'required|numeric|min:0',
+            'nominal_spp' => 'required|numeric|min:0',
+            // ----------------------------
+
             'color' => 'required|string|max:50',
             'featured' => 'boolean',
             'details' => 'required|array|min:1',
             'details.*' => 'required|string',
         ]);
 
-        // Update slug jika nama berubah (opsional, tapi disarankan)
         $validated['slug'] = Str::slug($validated['nama']);
 
         $program->update($validated);
@@ -89,9 +83,6 @@ class AdminProgramController extends Controller
         return redirect()->route('admin.program.index')->with('success', 'Program berhasil diperbarui');
     }
 
-    /**
-     * Menghapus program.
-     */
     public function destroy(Program $program)
     {
         $program->delete();

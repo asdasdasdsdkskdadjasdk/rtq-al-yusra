@@ -1,167 +1,212 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, router } from '@inertiajs/react';
+import Modal from '@/Components/Modal';
 
-export default function SppIndex({ auth, history }) {
-    const { data, setData, post, processing, errors, reset } = useForm({
-        bulan: '',
-        tahun: new Date().getFullYear(),
-        jumlah: '',
-        bukti_transfer: null,
+// Terima props baru: spp_aktif, pesan
+export default function SppIndex({ spp_aktif, pesan, listBulan, nominalSpp, isBeasiswa, midtrans_client_key, tahunDipilih, tahunList }) {
+    
+    // --- KONDISI: SPP BELUM AKTIF ---
+    if (!spp_aktif) {
+        return (
+            <AuthenticatedLayout>
+                <Head title="Pembayaran SPP" />
+                <div className="py-12 max-w-7xl mx-auto px-4 text-center">
+                    <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200">
+                        <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <h2 className="text-xl font-bold text-gray-800 mb-2">SPP Belum Tersedia</h2>
+                        <p className="text-gray-500">{pesan}</p>
+                    </div>
+                </div>
+            </AuthenticatedLayout>
+        );
+    }
+
+    // --- KONDISI: SPP AKTIF (Kode Lama) ---
+    const [selectedMonth, setSelectedMonth] = useState(null); 
+    const [modalType, setModalType] = useState(null); 
+
+    const { data, setData, post, processing, reset } = useForm({
+        bulan: '', tahun: '', jumlah_bayar: '', keterangan: '', bukti_bayar: null
     });
 
-    const bulanList = [
-        'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-    ];
+    const handleYearChange = (e) => {
+        router.get(route('spp.index'), { tahun: e.target.value }, { preserveState: true });
+    };
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        post(route('spp.store'), {
-            onSuccess: () => reset('bukti_transfer', 'jumlah'),
+    // ... (useEffect Midtrans sama) ...
+    useEffect(() => {
+        const script = document.createElement('script');
+        script.src = "https://app.sandbox.midtrans.com/snap/snap.js"; 
+        script.setAttribute('data-client-key', midtrans_client_key);
+        document.body.appendChild(script);
+        return () => { if (document.body.contains(script)) document.body.removeChild(script); };
+    }, [midtrans_client_key]);
+
+    const openPaymentModal = (bulanItem) => {
+        setSelectedMonth(bulanItem);
+        setData({ 
+            bulan: bulanItem.bulan_angka, 
+            tahun: bulanItem.tahun,
+            jumlah_bayar: nominalSpp, 
+            keterangan: '' 
         });
+        if (isBeasiswa) return;
+        setModalType('selection'); 
     };
 
-    // Helper format uang
-    const formatRupiah = (number) => {
-        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
+    // ... (Handler Pay Standard, Custom, Upload sama persis) ...
+    const handlePayStandard = async () => {
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            const res = await fetch(route('spp.pay_standard'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                body: JSON.stringify({ bulan: data.bulan, tahun: data.tahun })
+            });
+            const result = await res.json();
+            if (result.token) {
+                window.snap.pay(result.token, {
+                    onSuccess: () => { setModalType(null); window.location.reload(); },
+                    onPending: () => { setModalType(null); alert("Menunggu Pembayaran"); },
+                    onError: () => alert("Gagal")
+                });
+            }
+        } catch(e) { alert("Error"); }
     };
 
-    // Helper warna status
-    const getStatusColor = (status) => {
-        switch(status) {
-            case 'Diterima': return 'bg-green-100 text-green-800';
-            case 'Ditolak': return 'bg-red-100 text-red-800';
-            default: return 'bg-yellow-100 text-yellow-800';
-        }
+    const handlePayCustom = async (e) => {
+        e.preventDefault();
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            const res = await fetch(route('spp.pay_custom'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                body: JSON.stringify({ bulan: data.bulan, tahun: data.tahun, jumlah_bayar: data.jumlah_bayar, keterangan: data.keterangan })
+            });
+            const result = await res.json();
+            if (result.token) {
+                window.snap.pay(result.token, {
+                    onSuccess: () => { setModalType(null); window.location.reload(); },
+                    onPending: () => { setModalType(null); alert("Menunggu Approval Admin"); },
+                    onError: () => alert("Gagal")
+                });
+            }
+        } catch(e) { alert("Error"); }
+    };
+
+    const handleUpload = (e) => {
+        e.preventDefault();
+        post(route('spp.upload'), { 
+            onSuccess: () => { setModalType(null); reset(); alert("Bukti terupload."); } 
+        });
     };
 
     return (
         <AuthenticatedLayout>
             <Head title="Pembayaran SPP" />
-
-            <div className="space-y-6">
+            <div className="py-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 
-                {/* --- FORM UPLOAD --- */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <h3 className="text-lg font-bold text-gray-800 mb-4 border-b pb-2">Upload Bukti SPP</h3>
-                    
-                    <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        
-                        {/* Pilih Bulan */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Bulan Pembayaran</label>
-                            <select 
-                                value={data.bulan}
-                                onChange={e => setData('bulan', e.target.value)}
-                                className="w-full rounded-lg border-gray-300 focus:ring-orange-500 focus:border-orange-500"
-                                required
-                            >
-                                <option value="">-- Pilih Bulan --</option>
-                                {bulanList.map(bln => (
-                                    <option key={bln} value={bln}>{bln}</option>
-                                ))}
-                            </select>
-                            {errors.bulan && <p className="text-red-500 text-xs mt-1">{errors.bulan}</p>}
-                        </div>
-
-                        {/* Pilih Tahun */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Tahun</label>
-                            <input 
-                                type="number" 
-                                value={data.tahun}
-                                onChange={e => setData('tahun', e.target.value)}
-                                className="w-full rounded-lg border-gray-300 focus:ring-orange-500 focus:border-orange-500"
-                                required
-                            />
-                            {errors.tahun && <p className="text-red-500 text-xs mt-1">{errors.tahun}</p>}
-                        </div>
-
-                        {/* Nominal */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Jumlah Transfer (Rp)</label>
-                            <input 
-                                type="number" 
-                                value={data.jumlah}
-                                onChange={e => setData('jumlah', e.target.value)}
-                                className="w-full rounded-lg border-gray-300 focus:ring-orange-500 focus:border-orange-500"
-                                placeholder="Contoh: 150000"
-                                required
-                            />
-                            {errors.jumlah && <p className="text-red-500 text-xs mt-1">{errors.jumlah}</p>}
-                        </div>
-
-                        {/* File Upload */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Bukti Foto / Screenshot</label>
-                            <input 
-                                type="file" 
-                                accept="image/*"
-                                onChange={e => setData('bukti_transfer', e.target.files[0])}
-                                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
-                                required
-                            />
-                            {errors.bukti_transfer && <p className="text-red-500 text-xs mt-1">{errors.bukti_transfer}</p>}
-                        </div>
-
-                        <div className="md:col-span-2">
-                            <button 
-                                type="submit" 
-                                disabled={processing}
-                                className="px-6 py-2 bg-orange-600 text-white font-bold rounded-lg hover:bg-orange-700 transition w-full md:w-auto shadow-md"
-                            >
-                                {processing ? 'Mengupload...' : 'Kirim Bukti Pembayaran'}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-
-                {/* --- RIWAYAT PEMBAYARAN --- */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <h3 className="text-lg font-bold text-gray-800 mb-4">Riwayat Pembayaran</h3>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left text-gray-500">
-                            <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-                                <tr>
-                                    <th className="px-4 py-3">Tanggal Upload</th>
-                                    <th className="px-4 py-3">Periode</th>
-                                    <th className="px-4 py-3">Jumlah</th>
-                                    <th className="px-4 py-3">Status</th>
-                                    <th className="px-4 py-3">Bukti</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {history.length > 0 ? (
-                                    history.map((item) => (
-                                        <tr key={item.id} className="bg-white border-b hover:bg-gray-50">
-                                            <td className="px-4 py-3">{new Date(item.created_at).toLocaleDateString('id-ID')}</td>
-                                            <td className="px-4 py-3 font-medium text-gray-900">{item.bulan} {item.tahun}</td>
-                                            <td className="px-4 py-3">{formatRupiah(item.jumlah)}</td>
-                                            <td className="px-4 py-3">
-                                                <span className={`px-2 py-1 rounded-full text-xs font-bold ${getStatusColor(item.status)}`}>
-                                                    {item.status}
-                                                </span>
-                                                {item.catatan_admin && (
-                                                    <p className="text-xs text-red-500 mt-1 italic">Note: {item.catatan_admin}</p>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <a href={`/storage/${item.bukti_transfer}`} target="_blank" className="text-blue-600 hover:underline text-xs">
-                                                    Lihat Foto
-                                                </a>
-                                            </td>
-                                        </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan="5" className="px-4 py-6 text-center text-gray-400">Belum ada riwayat pembayaran.</td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
+                {/* Header & Filter Tahun */}
+                <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+                    <div>
+                        <h2 className="text-2xl font-bold text-gray-800">Tagihan SPP Bulanan</h2>
+                        <p className="text-gray-500 text-sm">Menampilkan tagihan aktif.</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-gray-600">Tahun:</span>
+                        <select value={tahunDipilih} onChange={handleYearChange} className="border-gray-300 rounded-lg shadow-sm font-bold text-gray-700 focus:ring-blue-500">
+                            {tahunList.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
                     </div>
                 </div>
+                
+                {listBulan.length === 0 ? (
+                    <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                        <p className="text-gray-500 font-medium">Tidak ada tagihan untuk periode ini.</p>
+                        <p className="text-xs text-gray-400 mt-1">Tagihan hanya muncul mulai dari Tanggal Masuk sampai bulan sekarang.</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {listBulan.map((bulan) => (
+                            <div key={bulan.bulan_angka} className={`relative p-5 rounded-xl border shadow-sm transition hover:shadow-md bg-white ${
+                                bulan.status === 'Lunas' || isBeasiswa ? 'border-green-500 ring-1 ring-green-100' : 
+                                bulan.status === 'Menunggu Konfirmasi' ? 'border-yellow-500 ring-1 ring-yellow-100' : 'border-red-200'
+                            }`}>
+                                <div className="flex justify-between items-start mb-3">
+                                    <h3 className="font-bold text-lg text-gray-800">{bulan.bulan_nama}</h3>
+                                    <span className={`text-[10px] px-2 py-1 rounded font-bold uppercase tracking-wide ${
+                                        bulan.status === 'Lunas' || isBeasiswa ? 'bg-green-100 text-green-700' : 
+                                        bulan.status === 'Menunggu Konfirmasi' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+                                    }`}>{bulan.status}</span>
+                                </div>
+                                
+                                <div className="text-sm text-gray-600 mb-4">
+                                    <p>Tagihan: <span className="font-bold">{isBeasiswa ? 'Gratis' : `Rp ${nominalSpp.toLocaleString()}`}</span></p>
+                                    {bulan.riwayat_terakhir && <p className="text-xs text-gray-400 mt-1 italic">{bulan.riwayat_terakhir.keterangan}</p>}
+                                </div>
+
+                                {bulan.status === 'Belum Lunas' && !isBeasiswa && (
+                                    <button onClick={() => openPaymentModal(bulan)} className="w-full bg-blue-600 text-white text-sm font-bold py-2.5 rounded-lg hover:bg-blue-700 transition">Bayar Sekarang</button>
+                                )}
+                                
+                                {(bulan.status === 'Lunas' || bulan.status === 'Menunggu Konfirmasi') && (
+                                    <button disabled className="w-full bg-gray-100 text-gray-400 text-sm font-bold py-2.5 rounded-lg cursor-not-allowed">
+                                        {bulan.status === 'Lunas' ? 'Sudah Dibayar' : 'Sedang Proses'}
+                                    </button>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* --- MODAL SELECTION, CUSTOM, UPLOAD (Sama seperti sebelumnya) --- */}
+                <Modal show={modalType === 'selection'} onClose={() => setModalType(null)}>
+                    <div className="p-6">
+                        <h3 className="font-bold text-lg mb-4">Pilih Metode ({selectedMonth?.bulan_nama})</h3>
+                        <div className="space-y-3">
+                            <button onClick={handlePayStandard} className="w-full p-4 border rounded-xl hover:bg-blue-50 text-left">
+                                <span className="font-bold block">Bayar Sesuai Tagihan</span>
+                                <span className="text-xs text-green-600">Otomatis Lunas</span>
+                            </button>
+                            <button onClick={() => setModalType('custom')} className="w-full p-4 border rounded-xl hover:bg-yellow-50 text-left">
+                                <span className="font-bold block">Input Nominal Lain (Infak)</span>
+                                <span className="text-xs text-yellow-600">Menunggu Verifikasi Admin</span>
+                            </button>
+                            <button onClick={() => setModalType('upload')} className="w-full p-4 border rounded-xl hover:bg-gray-50 text-left">
+                                <span className="font-bold block">Upload Bukti Transfer</span>
+                                <span className="text-xs text-yellow-600">Menunggu Verifikasi Admin</span>
+                            </button>
+                        </div>
+                    </div>
+                </Modal>
+
+                {/* MODAL INPUT CUSTOM */}
+                <Modal show={modalType === 'custom'} onClose={() => setModalType(null)}>
+                    <div className="p-6">
+                        <h3 className="font-bold mb-4">Input Nominal</h3>
+                        <form onSubmit={handlePayCustom} className="space-y-4">
+                            <input type="number" className="w-full border rounded p-2" value={data.jumlah_bayar} onChange={e => setData('jumlah_bayar', e.target.value)} required placeholder="Nominal" />
+                            <input type="text" className="w-full border rounded p-2" value={data.keterangan} onChange={e => setData('keterangan', e.target.value)} placeholder="Keterangan" />
+                            <button className="w-full bg-blue-600 text-white py-2 rounded font-bold">Bayar</button>
+                        </form>
+                    </div>
+                </Modal>
+
+                {/* MODAL UPLOAD */}
+                <Modal show={modalType === 'upload'} onClose={() => setModalType(null)}>
+                    <div className="p-6">
+                        <h3 className="font-bold mb-4">Upload Bukti</h3>
+                        <form onSubmit={handleUpload} className="space-y-4">
+                            <input type="number" className="w-full border rounded p-2" value={data.jumlah_bayar} onChange={e => setData('jumlah_bayar', e.target.value)} required placeholder="Nominal" />
+                            <input type="file" className="w-full border rounded p-2" onChange={e => setData('bukti_bayar', e.target.files[0])} required />
+                            <input type="text" className="w-full border rounded p-2" value={data.keterangan} onChange={e => setData('keterangan', e.target.value)} placeholder="Keterangan" />
+                            <button className="w-full bg-green-600 text-white py-2 rounded font-bold">Kirim</button>
+                        </form>
+                    </div>
+                </Modal>
 
             </div>
         </AuthenticatedLayout>

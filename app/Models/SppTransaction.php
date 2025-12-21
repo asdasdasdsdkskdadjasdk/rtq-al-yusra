@@ -5,15 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class RiwayatUangMasuk extends Model
+class SppTransaction extends Model
 {
     use HasFactory;
+    protected $guarded = ['id'];
 
-    protected $fillable = ['uang_masuk_id', 'jumlah_bayar', 'tanggal_bayar', 'keterangan', 'pencatat_id', 'bukti_bayar', 'status'];
-
-    public function uangMasuk()
+    public function user()
     {
-        return $this->belongsTo(UangMasuk::class);
+        return $this->belongsTo(User::class);
     }
 
     public function pencatat()

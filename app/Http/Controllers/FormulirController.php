@@ -5,7 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Pendaftar;
 use App\Models\Program;
 use App\Models\Jadwal;
-use App\Models\Cabang; // <--- PENTING: Import Model Cabang
+use App\Models\Cabang; 
+use App\Models\UangMasuk;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -13,8 +14,7 @@ use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Midtrans\Config;
 use Midtrans\Snap;
-use Barryvdh\DomPDF\Facade\Pdf; // Untuk PDF Template
-use App\Models\UangMasuk;
+use Barryvdh\DomPDF\Facade\Pdf; 
 
 class FormulirController extends Controller
 {
@@ -22,10 +22,6 @@ class FormulirController extends Controller
 
     private function cekPendaftaranAktif($userId)
     {
-        // Logika: 
-        // 1. Belum Bayar -> Aktif
-        // 2. Lunas TAPI 'Tidak Lulus' -> Boleh daftar lagi (Dianggap tidak aktif)
-        // 3. Lulus / Verifikasi / Menunggu Hasil -> Aktif (Tidak boleh daftar baru)
         return Pendaftar::where('user_id', $userId)
             ->where(function ($query) {
                 $query->where('status_pembayaran', 'Belum Bayar')
@@ -78,19 +74,17 @@ class FormulirController extends Controller
         $program = Program::where('slug', $program_slug)->first();
         if (!$program) abort(404);
 
-        // --- PERBAIKAN DI SINI ---
-        // Ambil data cabang dari database untuk dropdown
-        $cabangs = Cabang::all();
+        $cabangs = Cabang::all(); // Ambil Data Cabang
 
         return Inertia::render('Formulir', [
             'program' => $program,
-            'cabangs' => $cabangs // <--- Kirim ke Frontend
+            'cabangs' => $cabangs
         ]);
     }
 
     public function store(Request $request)
     {
-        // 1. Validasi Input (Tetap sama)
+        // 1. Validasi Input
         $validatedData = $request->validate([
             'nik' => 'required|string|max:16', 
             'nama' => 'required|string|max:255',
@@ -103,8 +97,13 @@ class FormulirController extends Controller
             'alamat' => 'required|string',
             'cabang' => 'required|string|max:255',
             'nama_orang_tua' => 'required|string|max:255',
+            
+            // Program (Penting)
             'program_nama' => 'required|string',
             'program_jenis' => 'required|string',
+            // Kita terima ID Program juga (hidden input atau dicari manual)
+            'program_id' => 'nullable|exists:programs,id', 
+
             'ijazah_terakhir' => 'nullable|file|mimes:pdf,jpg,png,jpeg|max:2048',
             'kartu_keluarga' => 'nullable|file|mimes:pdf,jpg,png,jpeg|max:2048',
             'pas_foto' => 'nullable|file|mimes:jpg,png,jpeg|max:2048',
@@ -112,7 +111,7 @@ class FormulirController extends Controller
             'sks' => 'nullable|file|mimes:pdf,jpg,png,jpeg|max:2048',
         ]);
 
-        // 2. Cek Pendaftaran Aktif (Tetap sama)
+        // 2. Cek Pendaftaran Aktif
         $existingPendaftar = $this->cekPendaftaranAktif(Auth::id());
 
         if ($existingPendaftar && $existingPendaftar->status === 'Lulus') {
@@ -125,9 +124,9 @@ class FormulirController extends Controller
 
         if (!$existingPendaftar) {
             $nikExists = Pendaftar::where('nik', $request->nik)
-                                ->where('status', '!=', 'Tidak Lulus')
-                                ->where('user_id', '!=', Auth::id())
-                                ->exists();
+                ->where('status', '!=', 'Tidak Lulus')
+                ->where('user_id', '!=', Auth::id())
+                ->exists();
             if ($nikExists) {
                 return redirect()->back()->withErrors(['nik' => 'NIK ini sudah terdaftar aktif.']);
             }
@@ -135,7 +134,17 @@ class FormulirController extends Controller
 
         $dataToSave = $validatedData;
 
-        // 3. Handle File Upload (Tetap sama)
+        // 3. [PENTING] Set Program ID (Jika belum ada di request)
+        if (empty($dataToSave['program_id'])) {
+            $program = Program::where('nama', $request->program_nama)->first();
+            if ($program) {
+                $dataToSave['program_id'] = $program->id;
+            }
+        } else {
+            $program = Program::find($dataToSave['program_id']);
+        }
+
+        // 4. Handle File Upload
         $filesToUpload = ['ijazah_terakhir', 'kartu_keluarga', 'pas_foto', 'skbb', 'sks'];
         foreach ($filesToUpload as $file) {
             if ($request->hasFile($file)) {
@@ -149,24 +158,25 @@ class FormulirController extends Controller
             }
         }
         
-        // 4. HITUNG BIAYA & LOGIKA GRATIS
-        $program = Program::where('nama', $request->program_nama)->first();
-        $biayaClean = $program ? preg_replace('/[^0-9]/', '', $program->biaya) : 300000;
+        // 5. Hitung Biaya Pendaftaran
+        // Ambil dari kolom 'biaya' di tabel programs (biasanya format text: "Rp 300.000")
+        // Kita bersihkan jadi angka murni
+        $biayaString = $program ? $program->biaya : '300000'; 
+        $biayaClean = preg_replace('/[^0-9]/', '', $biayaString);
         $nominal = (int) $biayaClean;
+        
         $dataToSave['nominal_pembayaran'] = $nominal;
 
-        // [LOGIKA BARU] Cek apakah Gratis (Rp 0)
+        // 6. Logika Gratis / Berbayar
         if ($nominal <= 0) {
-            // Jika Gratis: Set status Lunas & Lewati proses pembayaran
             $dataToSave['status_pembayaran'] = 'Lunas';
         } else {
-            // Jika Berbayar: Set status Belum Bayar (untuk pendaftar baru)
             if (!$existingPendaftar) {
                 $dataToSave['status_pembayaran'] = 'Belum Bayar';
             }
         }
 
-        // 5. Simpan / Update Database
+        // 7. Simpan Database
         if ($existingPendaftar) {
             $existingPendaftar->update($dataToSave);
             $pendaftar = $existingPendaftar;
@@ -174,19 +184,16 @@ class FormulirController extends Controller
             $dataToSave['no_pendaftaran'] = 'RTQ-' . now()->format('Ymd') . '-' . strtoupper(substr(uniqid(), -4));
             $dataToSave['user_id'] = Auth::id(); 
             $dataToSave['status'] = 'Menunggu Verifikasi'; 
-            // status_pembayaran sudah diatur di poin 4
             $pendaftar = Pendaftar::create($dataToSave);
         }
 
-        // 6. LOGIKA MIDTRANS (HANYA JIKA BERBAYAR)
+        // 8. Midtrans (Jika Berbayar)
         if ($nominal > 0) {
-            // Konfigurasi Midtrans
             Config::$serverKey = config('midtrans.server_key');
             Config::$isProduction = config('midtrans.is_production');
             Config::$isSanitized = config('midtrans.is_sanitized');
             Config::$is3ds = config('midtrans.is_3ds');
 
-            // Generate Snap Token jika belum ada atau nominal berubah
             if (empty($pendaftar->snap_token)) {
                  $params = [
                     'transaction_details' => [
@@ -206,22 +213,19 @@ class FormulirController extends Controller
                     Log::error('Midtrans Error: ' . $e->getMessage());
                 }
             }
-
-            // Redirect ke Halaman Pembayaran (JIKA BERBAYAR)
             return redirect()->route('pembayaran.show', ['id' => $pendaftar->id]);
         } 
         
-        // 7. JIKA GRATIS -> LANGSUNG KE STATUS
+        // 9. Jika Gratis -> Selesai
         else {
             return redirect()->route('status.cek')->with('success', 'Pendaftaran berhasil dikirim (Gratis).');
         }
     }
     
-    // --- STATUS CHECK & AUTO SCHEDULE ---
+    // --- STATUS CHECK ---
     public function checkStatus()
     {
         $user = auth()->user();
-        
         $pendaftarList = Pendaftar::where('user_id', $user->id)->get();
 
         if ($pendaftarList->isEmpty()) {
@@ -230,14 +234,10 @@ class FormulirController extends Controller
 
         $semuaJadwal = Jadwal::all();
 
+        // Logika Auto Schedule (Jadwal Ujian)
         foreach ($pendaftarList as $pendaftar) {
             if ($pendaftar->status_pembayaran == 'Lunas') {
                 $updates = [];
-
-                // if ($pendaftar->status == 'Menunggu Verifikasi') {
-                //     $updates['status'] = 'Sudah Diverifikasi';
-                // }
-
                 if (empty($pendaftar->tanggal_ujian)) {
                     $tanggalDipilih = null;
                     foreach ($semuaJadwal as $jadwal) {
@@ -273,13 +273,14 @@ class FormulirController extends Controller
         }
 
         $pendaftarListFresh = Pendaftar::where('user_id', $user->id)
-                                  ->orderBy('created_at', 'desc')
-                                  ->get();
+                                         ->orderBy('created_at', 'desc')
+                                         ->get();
 
         foreach ($pendaftarListFresh as $pendaftar) {
             $programData = Program::where('nama', $pendaftar->program_nama)->first();
             $pendaftar->materi_ujian_program = $programData ? $programData->materi_ujian : null;
 
+            // Cari Jadwal Pengumuman
             $tanggalPengumumanFound = null;
             if ($pendaftar->tanggal_ujian) {
                 foreach ($semuaJadwal as $jadwal) {
@@ -363,6 +364,7 @@ class FormulirController extends Controller
         ]);
     }
 
+    // --- SIMPAN DAFTAR ULANG & GENERATE TAGIHAN ---
     public function daftarUlangStore(Request $request)
     {
         $request->validate([
@@ -374,27 +376,52 @@ class FormulirController extends Controller
         ]);
 
         $user = Auth::user();
-        $pendaftar = Pendaftar::where('user_id', $user->id)->latest()->firstOrFail();
+        
+        // Ambil pendaftar + data programnya
+        $pendaftar = Pendaftar::with('program')->where('user_id', $user->id)->latest()->firstOrFail();
 
         if ($request->hasFile('surat_pernyataan')) {
             if ($pendaftar->surat_pernyataan) {
                 Storage::disk('public')->delete($pendaftar->surat_pernyataan);
             }
+            
             $path = $request->file('surat_pernyataan')->store('berkas_daftar_ulang', 'public');
             
             $pendaftar->update([
                 'surat_pernyataan' => $path,
                 'status' => 'Sudah Daftar Ulang'
             ]);
+
+            // --- [FITUR BARU] TAGIHAN UANG MASUK (DINAMIS) ---
+            $program = $pendaftar->program;
+            $nominalTagihan = 5000000; // Default Safety
+            $statusLunas = 'Belum Lunas';
+
+            if ($program) {
+                // 1. Cek Beasiswa (Gratis)
+                if (stripos($program->nama, 'Beasiswa') !== false) {
+                    $nominalTagihan = 0;
+                    $statusLunas = 'Lunas';
+                } else {
+                    // 2. Ambil harga dari database
+                    $nominalTagihan = (int)$program->nominal_uang_masuk;
+                }
+            }
+
             UangMasuk::firstOrCreate(
-    ['user_id' => $user->id],
-    ['total_tagihan' => 5000000, 'sudah_dibayar' => 0, 'status' => 'Belum Lunas'] // Contoh 5 Juta
-);
+                ['user_id' => $user->id],
+                [
+                    'total_tagihan' => $nominalTagihan,
+                    'sudah_dibayar' => 0, 
+                    'status' => $statusLunas
+                ]
+            );
+
+            // Ubah Role User Jadi Wali Santri
+            $user->update(['role' => 'wali_santri']); 
         }
 
-        $user->update(['role' => 'wali_santri']); 
-
-        return redirect()->route('status.cek')->with('success', 'Alhamdulillah, proses daftar ulang berhasil!');
+        return redirect()->route('status.cek')->with('success', 'Alhamdulillah, proses daftar ulang berhasil! Menu pembayaran Uang Masuk kini tersedia.');
     }
 
     public function downloadTemplate()

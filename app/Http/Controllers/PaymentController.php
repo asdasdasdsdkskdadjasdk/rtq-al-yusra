@@ -2,118 +2,177 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Pendaftar;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
+use App\Models\Pendaftar;
+use App\Models\UangMasuk;
+use App\Models\RiwayatUangMasuk;
+use App\Models\SppTransaction; // <--- Add SPP Model
 use Midtrans\Config;
-use Midtrans\Snap;
+use Midtrans\Notification;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
 
 class PaymentController extends Controller
 {
+    /**
+     * Halaman Pembayaran (Khusus Pendaftaran Awal)
+     */
     public function show($id)
-{
-    $pendaftar = Pendaftar::findOrFail($id);
-
-    // PENGAMAN: Jika sudah lunas atau gratis, tidak perlu bayar lagi
-    if ($pendaftar->status_pembayaran == 'Lunas' || $pendaftar->status_pembayaran == 'Gratis') {
-        return redirect()->route('status.cek')
-            ->with('message', 'Pendaftaran ini gratis atau sudah dibayar.');
+    {
+        $pendaftar = Pendaftar::findOrFail($id);
+        
+        // Setup Config agar Client Key di frontend sesuai
+        Config::$serverKey = config('midtrans.server_key');
+        Config::$isProduction = config('midtrans.is_production');
+        
+        return Inertia::render('Pembayaran', [
+            'pendaftar' => $pendaftar,
+            'clientKey' => config('midtrans.client_key'),
+        ]);
     }
-        // Cari pendaftar berdasarkan NIK
-        // Jika data sudah dihapus (karena expire), ini akan otomatis return 404 (Not Found)
-$pendaftar = Pendaftar::findOrFail($id);
-        if ($pendaftar->user_id !== \Illuminate\Support\Facades\Auth::id()) {
-            abort(403);
-        }
 
-        if ($pendaftar->status_pembayaran == 'Lunas') {
-        return redirect()->route('status.cek');
-    }
-    
-        // Konfigurasi Midtrans
+    /**
+     * Webhook Notification Handler (Dipanggil oleh Midtrans)
+     */
+    public function notification(Request $request)
+    {
+        // 1. Konfigurasi Midtrans
         Config::$serverKey = config('midtrans.server_key');
         Config::$isProduction = config('midtrans.is_production');
         Config::$isSanitized = config('midtrans.is_sanitized');
         Config::$is3ds = config('midtrans.is_3ds');
 
-        // Generate Token baru jika belum ada
-        if (empty($pendaftar->snap_token) && $pendaftar->status_pembayaran == 'Belum Bayar' && $pendaftar->nominal_pembayaran > 0) {
-            
-            $params = [
-                'transaction_details' => [
-                    'order_id' => $pendaftar->no_pendaftaran . '-' . time(), // Order ID unik
-                    'gross_amount' => (int) $pendaftar->nominal_pembayaran,
-                ],
-                'customer_details' => [
-                    'first_name' => $pendaftar->nama,
-                    'email' => $pendaftar->email,
-                    'phone' => $pendaftar->no_hp,
-                ],
-                // --- PENTING: SETTING WAKTU KADALUWARSA ---
-                // Di sini kita atur agar Midtrans otomatis menganggap expire setelah waktu tertentu
-                'expiry' => [
-                    'start_time' => date("Y-m-d H:i:s O"),
-                    'unit' => 'minutes', 
-                    'duration' => 10 // Data dihapus jika tidak dibayar dalam 60 menit
-                ],
-            ];
-
-            try {
-                $snapToken = Snap::getSnapToken($params);
-                $pendaftar->update(['snap_token' => $snapToken]);
-            } catch (\Exception $e) {
-                Log::error('Midtrans Error: ' . $e->getMessage());
-            }
+        try {
+            $notif = new Notification();
+        } catch (\Exception $e) {
+            Log::error('Midtrans Notification Error: ' . $e->getMessage());
+            return response()->json(['message' => 'Invalid notification data'], 400);
         }
 
-        // Render halaman
-        return Inertia::render('Pembayaran', [
-            'pendaftar' => $pendaftar,
-            'clientKey' => config('midtrans.client_key'),
-            // 'qrCode' => ... (kode qr statis Anda jika ada)
-        ]);
-    }
+        $transaction = $notif->transaction_status;
+        $type = $notif->payment_type;
+        $orderId = $notif->order_id;
+        $fraud = $notif->fraud_status;
 
-    // --- LOGIKA UTAMA: WEBHOOK NOTIFICATION ---
-    // Method ini yang dipanggil otomatis oleh Midtrans di background
-    public function notification(Request $request)
-    {
+        // Log masuknya notifikasi untuk debugging
+        Log::info("Midtrans Notification received for Order ID: $orderId ($transaction)");
 
-        Log::info('Midtrans Notification Masuk!');
-        Log::info('Data:', $request->all());
-        $serverKey = config('midtrans.server_key');
+        // 2. Tentukan Status Transaksi
+        $transactionStatus = null;
+        if ($transaction == 'capture') {
+            if ($type == 'credit_card') {
+                $transactionStatus = ($fraud == 'challenge') ? 'challenge' : 'success';
+            }
+        } elseif ($transaction == 'settlement') {
+            $transactionStatus = 'success';
+        } elseif ($transaction == 'pending') {
+            $transactionStatus = 'pending';
+        } elseif ($transaction == 'deny' || $transaction == 'expire' || $transaction == 'cancel') {
+            $transactionStatus = 'failure';
+        }
+
+        // 3. Proses Berdasarkan Tipe Order ID
         
-        // Validasi Signature
-        $hashed = hash("sha512", $request->order_id . $request->status_code . $request->gross_amount . $serverKey);
-        
-        if ($hashed == $request->signature_key) {
+        // --- KASUS A: Pembayaran Pendaftaran (RTQ-...) ---
+        if (str_starts_with($orderId, 'RTQ-')) {
+            $parts = explode('-', $orderId);
+            array_pop($parts); // Buang timestamp
+            $realNoPendaftaran = implode('-', $parts);
+
+            $pendaftar = Pendaftar::where('no_pendaftaran', $realNoPendaftaran)
+                            ->orWhere('snap_token', $orderId)
+                            ->first();
             
-            // Parsing Order ID untuk mendapatkan No Pendaftaran asli
-            $orderIdParts = explode('-', $request->order_id);
-            array_pop($orderIdParts); // Buang timestamp di belakang
-            $noPendaftaranAsli = implode('-', $orderIdParts);
-
-            $pendaftar = Pendaftar::where('no_pendaftaran', $noPendaftaranAsli)->first();
-
             if ($pendaftar) {
-                // SKENARIO 1: PEMBAYARAN BERHASIL
-                if ($request->transaction_status == 'capture' || $request->transaction_status == 'settlement') {
+                if ($transactionStatus == 'success') {
                     $pendaftar->update([
                         'status_pembayaran' => 'Lunas',
-                        'status' => 'Pendaftaran Diterima'
+                        'status' => 'Menunggu Verifikasi'
                     ]);
-                } 
-                // SKENARIO 2: WAKTU HABIS (EXPIRE) -> HAPUS DATA
-                elseif ($request->transaction_status == 'expire') {
-                    // Hapus data formulir agar user harus daftar ulang
-                    $pendaftar->delete();
-                }
-                // SKENARIO 3: DIBATALKAN (CANCEL/DENY) -> HAPUS DATA
-                elseif ($request->transaction_status == 'cancel' || $request->transaction_status == 'deny') {
-                    $pendaftar->delete();
+                    Log::info("Pendaftaran Lunas: $realNoPendaftaran");
+                } elseif ($transactionStatus == 'failure') {
+                    $pendaftar->update(['status_pembayaran' => 'Gagal']);
                 }
             }
         }
+
+        // --- KASUS B: Pembayaran Uang Masuk (UM-...) ---
+        elseif (str_starts_with($orderId, 'UM-')) {
+            $parts = explode('-', $orderId);
+            
+            if (count($parts) >= 2) {
+                $uangMasukId = $parts[1]; // ID ada di tengah
+                $uangMasuk = UangMasuk::find($uangMasukId);
+
+                if ($uangMasuk && $transactionStatus == 'success') {
+                    DB::transaction(function () use ($uangMasuk, $notif, $orderId) {
+                        // Cek Idempotency (Mencegah double input)
+                        $cekDouble = RiwayatUangMasuk::where('keterangan', 'LIKE', "%$orderId%")->exists();
+
+                        if (!$cekDouble) {
+                            // Simpan Riwayat
+                            RiwayatUangMasuk::create([
+                                'uang_masuk_id' => $uangMasuk->id,
+                                'jumlah_bayar'  => $notif->gross_amount,
+                                'tanggal_bayar' => now(),
+                                'keterangan'    => 'Midtrans Order: ' . $orderId,
+                                'pencatat_id'   => $uangMasuk->user_id,
+                                'status'        => 'approved' // Auto approved krn Midtrans
+                            ]);
+
+                            // Update Saldo
+                            $uangMasuk->sudah_dibayar += $notif->gross_amount;
+                            
+                            // Auto Lunas jika cukup
+                            if ($uangMasuk->sudah_dibayar >= $uangMasuk->total_tagihan) {
+                                $uangMasuk->status = 'Lunas';
+                            }
+                            
+                            $uangMasuk->save();
+                            
+                            Log::info("Cicilan Uang Masuk Berhasil: Rp " . $notif->gross_amount);
+                        }
+                    });
+                }
+            }
+        }
+
+        // --- KASUS C: Pembayaran SPP (SPP-...) [BARU] ---
+        elseif (str_starts_with($orderId, 'SPP-')) {
+            // Format: SPP-{ID_Transaksi}-{Timestamp}
+            $parts = explode('-', $orderId);
+            $trxId = $parts[1];
+            
+            $sppTrx = SppTransaction::find($trxId);
+
+            if ($sppTrx) {
+                if ($transactionStatus == 'success') {
+                    
+                    // 1. Jika Tipe 'midtrans_auto' -> Langsung APPROVED (Lunas)
+                    if ($sppTrx->tipe_pembayaran == 'midtrans_auto') {
+                        $sppTrx->update([
+                            'status' => 'approved',
+                            'keterangan' => $sppTrx->keterangan . ' [Lunas via Midtrans]'
+                        ]);
+                        Log::info("SPP Auto Lunas: ID $trxId");
+                    }
+                    
+                    // 2. Jika Tipe 'midtrans_manual' (Custom Nominal) -> Tetap PENDING tapi update info
+                    // Menunggu Admin Keuangan klik "Terima" di dashboard
+                    else if ($sppTrx->tipe_pembayaran == 'midtrans_manual') {
+                        $sppTrx->update([
+                            'keterangan' => $sppTrx->keterangan . ' [Uang Masuk Midtrans - Menunggu Verifikasi Admin]'
+                        ]);
+                        Log::info("SPP Custom Masuk (Pending Verif): ID $trxId");
+                    }
+
+                } elseif ($transactionStatus == 'failure') {
+                    $sppTrx->update(['status' => 'rejected']);
+                }
+            }
+        }
+
+        return response()->json(['status' => 'OK']);
     }
 }

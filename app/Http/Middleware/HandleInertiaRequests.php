@@ -6,81 +6,103 @@ use Illuminate\Http\Request;
 use Inertia\Middleware;
 use App\Models\Setting;
 use App\Models\UangMasuk;
+use App\Models\SppTransaction; // <--- JANGAN LUPA IMPORT
+use Carbon\Carbon; // <--- JANGAN LUPA IMPORT
 use Tighten\Ziggy\Ziggy;
 
 class HandleInertiaRequests extends Middleware
 {
-    /**
-     * The root template that is loaded on the first page visit.
-     *
-     * @var string
-     */
     protected $rootView = 'app';
 
-    /**
-     * Determine the current asset version.
-     */
     public function version(Request $request): ?string
     {
         return parent::version($request);
     }
 
-    /**
-     * Define the props that are shared by default.
-     *
-     * @return array<string, mixed>
-     */
     public function share(Request $request): array
     {
-        // 1. Ambil Pengaturan Sekolah (Global)
-        // Menggunakan try-catch agar jika tabel belum ada (saat migrate awal) tidak error
+        $settings = [];
         try {
             $settings = Setting::all()->pluck('value', 'key')->toArray();
-        } catch (\Exception $e) {
-            $settings = [];
+        } catch (\Exception $e) {}
+
+        $user = $request->user();
+        
+        // --- 1. LOGIKA CEK LUNAS UANG MASUK (KODE LAMA) ---
+        $isUangMasukLunas = false;
+        if ($user && $user->role === 'wali_santri') {
+            $biayaGlobal = isset($settings['biaya_uang_masuk']) ? (int)$settings['biaya_uang_masuk'] : 5000000;
+            $uangMasuk = UangMasuk::where('user_id', $user->id)->first();
+            
+            if ($uangMasuk) {
+                if ($uangMasuk->status === 'Lunas') {
+                    $isUangMasukLunas = true;
+                } else {
+                    $sudahDibayar = (int)$uangMasuk->sudah_dibayar;
+                    $tagihanUser = $uangMasuk->total_tagihan > 0 ? $uangMasuk->total_tagihan : $biayaGlobal;
+                    if ($sudahDibayar >= $tagihanUser) $isUangMasukLunas = true;
+                }
+            }
         }
 
-        // 2. Logika Menu Uang Masuk (Wali Santri)
-        $showUangMasukMenu = false;
+        // --- 2. LOGIKA CEK TUNGGAKAN SPP (BARU) ---
+        $totalTunggakanSpp = 0;
         
-        if ($request->user() && $request->user()->role === 'wali_santri') {
-            $uangMasuk = UangMasuk::where('user_id', $request->user()->id)->first();
+        // Hanya cek jika Wali Santri & BUKAN Beasiswa
+        if ($user && $user->role === 'wali_santri' && !$user->isBeasiswa()) {
             
-            // Tampilkan menu HANYA JIKA data tagihan ada DAN statusnya 'Belum Lunas'
-            // Jika sudah 'Lunas' atau data tidak ada, menu akan hilang (false)
-            if ($uangMasuk && $uangMasuk->status === 'Belum Lunas') {
-                $showUangMasukMenu = true;
+            // Ambil data pendaftar untuk tahu kapan mulai masuk
+            $pendaftar = $user->pendaftar()->with('program')->latest()->first();
+
+            // Tentukan Tanggal Mulai (Sama seperti logic di Controller)
+            if ($pendaftar && $pendaftar->tanggal_mulai_spp) {
+                $start = Carbon::parse($pendaftar->tanggal_mulai_spp)->startOfMonth();
+            } else {
+                // Default: 1 September tahun daftar (Fallback)
+                $tahunDaftar = $pendaftar ? $pendaftar->created_at->year : Carbon::now()->year;
+                $start = Carbon::create($tahunDaftar, 9, 1)->startOfMonth();
+            }
+
+            $end = Carbon::now()->startOfMonth(); // Sampai bulan ini
+
+            // Loop dari bulan mulai sampai bulan ini
+            while ($start->lte($end)) {
+                // Cek apakah bulan ini sudah LUNAS atau SEDANG PROSES (Pending)
+                // Kita anggap 'pending' sebagai 'sudah usaha bayar', jadi jangan di-alert merah dulu
+                $sudahBayar = SppTransaction::where('user_id', $user->id)
+                    ->where('bulan', $start->month)
+                    ->where('tahun', $start->year)
+                    ->whereIn('status', ['approved', 'pending']) // Pending tidak dihitung tunggakan
+                    ->exists();
+
+                if (!$sudahBayar) {
+                    $totalTunggakanSpp++;
+                }
+
+                $start->addMonth(); // Lanjut ke bulan berikutnya
             }
         }
 
         return [
             ...parent::share($request),
             
-            // Data Auth User
             'auth' => [
-                'user' => $request->user() ? [
-                    'id' => $request->user()->id,
-                    'name' => $request->user()->name,
-                    'email' => $request->user()->email,
-                    'role' => $request->user()->role,
-                    // Pastikan relasi 'pendaftar' ada di Model User jika ingin menggunakan ini
-                    'pendaftar' => $request->user()->pendaftar, 
+                'user' => $user ? [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role' => $user->role,
+                    'is_beasiswa' => $user->isBeasiswa(),
                 ] : null,
                 
-                // Variable ini dikirim ke Layout untuk mengatur visibilitas menu
-                'showUangMasukMenu' => $showUangMasukMenu,
+                'is_uang_masuk_lunas' => $isUangMasukLunas,
+                
+                // Kirim variable tunggakan ke Frontend
+                'spp_tunggakan' => $totalTunggakanSpp, 
             ],
 
-            // Data Pengaturan Sekolah (Logo, Nama, dll)
             'sekolah' => $settings,
-
-            // Ziggy (Routing di React)
-            'ziggy' => fn () => [
-                ...(new Ziggy)->toArray(),
-                'location' => $request->url(),
-            ],
-
-            // Flash Messages (Untuk Notifikasi Sukses/Gagal dari Controller)
+            'ziggy' => fn () => [ ...(new Ziggy)->toArray(), 'location' => $request->url() ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
