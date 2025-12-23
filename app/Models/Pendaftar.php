@@ -27,4 +27,6 @@ class Pendaftar extends Model
         // Pastikan kolom 'program_id' ada di tabel 'pendaftar'
         return $this->belongsTo(Program::class, 'program_id');
     }
+
+    
 }
