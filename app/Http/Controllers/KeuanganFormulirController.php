@@ -27,6 +27,7 @@ class KeuanganFormulirController extends Controller
         ]);
     }
 
+    
     public function show($id)
     {
         // Detail pendaftar (jika ingin lihat detail bukti bayar formulir)
@@ -35,5 +36,20 @@ class KeuanganFormulirController extends Controller
         return Inertia::render('Admin/Keuangan/Formulir/Show', [
             'pendaftar' => $pendaftar
         ]);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $pendaftar = Pendaftar::findOrFail($id);
+
+        $request->validate([
+            'status_pembayaran' => 'required|string|in:Belum Bayar,Lunas,Gagal',
+        ]);
+
+        $pendaftar->update([
+            'status_pembayaran' => $request->status_pembayaran
+        ]);
+
+        return redirect()->back()->with('success', 'Status pembayaran berhasil diperbarui.');
     }
 }

@@ -51,7 +51,7 @@ const navigationMenu = {
     // Kita akan tambahkan manual di bawah dengan pengecekan
     wali_santri: [
         { name: 'Dashboard', href: route('dashboard'), icon: DashboardIcon, current: 'dashboard' },
-        { name: 'Lihat Status Anak', href: '#', icon: StatusLulusIcon, current: 'status' },
+        { name: 'Lihat Status Anak', href: route('wali.status.anak'), icon: StatusLulusIcon, current: 'wali.status.anak' },
     ],
 };
 

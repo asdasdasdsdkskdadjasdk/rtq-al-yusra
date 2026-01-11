@@ -1,37 +1,62 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; // <--- Tambah useEffect
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router } from '@inertiajs/react';
 
-// Terima props 'cabangs' dan 'filters' dari Controller
-export default function PendaftaranIndex({ auth, pendaftar, cabangs, filters }) {
+export default function PendaftaranIndex({ auth, pendaftar, cabangs, filters, currentStatus }) {
     
-    // State untuk menyimpan pilihan filter saat ini
+    // State Filter Cabang
     const [selectedCabang, setSelectedCabang] = useState(filters.cabang || '');
+    
+    // State Search (BARU)
+    const [searchTerm, setSearchTerm] = useState(filters.search || '');
 
-    // Fungsi saat Dropdown Berubah
+    const tabs = [
+        { label: 'Semua', value: 'Semua' },
+        { label: 'Menunggu Verifikasi', value: 'Menunggu Verifikasi' },
+        { label: 'Lulus', value: 'Lulus' },
+        { label: 'Tidak Lulus', value: 'Tidak Lulus' },
+        { label: 'Sudah Daftar Ulang', value: 'Sudah Daftar Ulang' },
+    ];
+
+    // --- EFFECT: AUTO SEARCH (DEBOUNCE) ---
+    // Kode ini akan jalan 500ms setelah Anda berhenti mengetik
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(() => {
+            // Hanya reload jika ada perubahan nilai
+            if (searchTerm !== (filters.search || '')) {
+                router.get(
+                    route('psb.pendaftaran.index'),
+                    { 
+                        // Kirim semua filter agar tidak reset
+                        status: currentStatus, 
+                        cabang: selectedCabang, 
+                        search: searchTerm 
+                    }, 
+                    { 
+                        preserveState: true, 
+                        preserveScroll: true, 
+                        replace: true 
+                    }
+                );
+            }
+        }, 500); // Delay 500ms
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchTerm, selectedCabang, currentStatus]); // Dependency array
+
+    // Fungsi saat Dropdown Cabang Berubah
     const handleFilterChange = (e) => {
         const cabang = e.target.value;
         setSelectedCabang(cabang);
-
-        // Reload halaman dengan parameter cabang (GET request)
-        router.get(route('psb.pendaftaran.index'), 
-            { cabang: cabang }, // Kirim param
-            { 
-                preserveState: true, // Jangan reset scroll/state lain
-                replace: true,       // Ganti history browser
-                preserveScroll: true 
-            }
-        );
+        // Router.get sudah dihandle oleh useEffect di atas, jadi kita cukup set state saja
     };
 
-    // Fungsi Hapus Data
     const handleDelete = (id) => {
         if (confirm('Apakah Anda yakin ingin menghapus data pendaftaran ini?')) {
             router.delete(route('psb.pendaftaran.destroy', id));
         }
     };
 
-    // Fungsi Ganti Status Langsung
     const handleStatusChange = (id, newStatus) => {
         router.put(route('psb.pendaftaran.update', id), {
             status: newStatus
@@ -50,7 +75,7 @@ export default function PendaftaranIndex({ auth, pendaftar, cabangs, filters }) 
     };
 
     return (
-        <AuthenticatedLayout auth={auth}>
+        <AuthenticatedLayout user={auth.user}>
             <Head title="Manajemen Pendaftaran" />
 
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -61,27 +86,71 @@ export default function PendaftaranIndex({ auth, pendaftar, cabangs, filters }) 
                         Manajemen Pendaftaran
                     </h1>
 
-                    {/* --- FILTER CABANG (BARU) --- */}
-                    <div className="flex items-center gap-2">
-                        <label htmlFor="filterCabang" className="text-sm font-medium text-gray-700">
-                            Filter Cabang:
-                        </label>
-                        <select
-                            id="filterCabang"
-                            value={selectedCabang}
-                            onChange={handleFilterChange}
-                            className="border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm text-sm"
-                        >
-                            <option value="">Semua Cabang</option>
-                            {cabangs.map((c) => (
-                                <option key={c.id} value={c.nama}>
-                                    {c.nama}
-                                </option>
-                            ))}
-                        </select>
+                    <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                        
+                        {/* --- 1. INPUT SEARCH (BARU) --- */}
+                        <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </div>
+                            <input
+                                type="text"
+                                placeholder="Cari Nama Santri..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-10 border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm text-sm w-full sm:w-64"
+                            />
+                        </div>
+
+                        {/* --- 2. FILTER CABANG --- */}
+                        <div className="flex items-center gap-2">
+                            <select
+                                id="filterCabang"
+                                value={selectedCabang}
+                                onChange={handleFilterChange}
+                                className="border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm text-sm w-full"
+                            >
+                                <option value="">Semua Cabang</option>
+                                {cabangs.map((c) => (
+                                    <option key={c.id} value={c.nama}>
+                                        {c.nama}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
                 </div>
 
+                {/* TABS NAVIGATION */}
+                <div className="mb-6 border-b border-gray-200 bg-white rounded-t-lg px-4 pt-4 overflow-x-auto">
+                    <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+                        {tabs.map((tab) => (
+                            <Link
+                                key={tab.value}
+                                href={route('psb.pendaftaran.index', { 
+                                    status: tab.value,
+                                    cabang: selectedCabang, // Jaga filter cabang saat ganti tab
+                                    search: searchTerm      // Jaga search saat ganti tab
+                                })}
+                                preserveState
+                                preserveScroll
+                                className={`
+                                    whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200
+                                    ${currentStatus === tab.value
+                                        ? 'border-alyusra-orange text-alyusra-orange'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                    }
+                                `}
+                            >
+                                {tab.label}
+                            </Link>
+                        ))}
+                    </nav>
+                </div>
+                
+                {/* TABEL DATA */}
                 <div className="bg-white shadow-lg rounded-xl overflow-hidden border border-gray-100">
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm text-left text-gray-500">
@@ -89,7 +158,7 @@ export default function PendaftaranIndex({ auth, pendaftar, cabangs, filters }) 
                                 <tr>
                                     <th scope="col" className="px-6 py-4">No Pendaftaran</th>
                                     <th scope="col" className="px-6 py-4">Nama</th>
-                                    <th scope="col" className="px-6 py-4">Cabang</th> {/* Kolom Cabang Ditampilkan */}
+                                    <th scope="col" className="px-6 py-4">Cabang</th> 
                                     <th scope="col" className="px-6 py-4">Program</th>
                                     <th scope="col" className="px-6 py-4">Status</th>
                                     <th scope="col" className="px-6 py-4 text-center">Aksi</th>
@@ -107,7 +176,6 @@ export default function PendaftaranIndex({ auth, pendaftar, cabangs, filters }) 
                                                 <div className="text-xs text-gray-500 mt-1">{item.no_hp}</div>
                                             </td>
                                             
-                                            {/* Data Cabang */}
                                             <td className="px-6 py-4">
                                                 <span className="text-gray-600 font-medium">
                                                     {item.cabang || '-'}
@@ -168,7 +236,11 @@ export default function PendaftaranIndex({ auth, pendaftar, cabangs, filters }) 
                                 ) : (
                                     <tr>
                                         <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
-                                            <p>Tidak ada data pendaftar untuk cabang ini.</p>
+                                            {searchTerm ? (
+                                                <p>Tidak ditemukan pendaftar dengan nama "<strong>{searchTerm}</strong>".</p>
+                                            ) : (
+                                                <p>Tidak ada data pendaftar untuk kriteria ini.</p>
+                                            )}
                                         </td>
                                     </tr>
                                 )}
@@ -188,6 +260,8 @@ export default function PendaftaranIndex({ auth, pendaftar, cabangs, filters }) 
                                         <Link
                                             key={key}
                                             href={link.url}
+                                            // Tambahkan parameter search/filter ke link pagination
+                                            data={{ search: searchTerm, status: currentStatus, cabang: selectedCabang }}
                                             dangerouslySetInnerHTML={{ __html: link.label }}
                                             className={`px-3 py-1 text-xs rounded ${link.active ? 'bg-orange-500 text-white' : 'bg-white border text-gray-600 hover:bg-gray-100'}`}
                                         />

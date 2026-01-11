@@ -130,7 +130,7 @@ export default function UangMasukWali({ auth, tagihan, midtrans_client_key }) {
         <AuthenticatedLayout>
             <Head title="Tagihan Uang Masuk" />
             
-            <div className="max-w-4xl mx-auto space-y-6 py-6 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-8xl mx-auto space-y-6 py-6 px-4 sm:px-6 lg:px-8">
                 
                 {/* --- CARD STATUS UTAMA --- */}
                 <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-600 relative overflow-hidden">

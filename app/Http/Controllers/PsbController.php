@@ -11,26 +11,38 @@ class PsbController extends Controller
 {
     public function index(Request $request)
     {
-        // 1. Query Dasar
-        $query = Pendaftar::query();
+        // 1. Mulai Query
+        $query = Pendaftar::with(['user', 'program'])->latest();
 
-        // 2. Filter Berdasarkan Cabang (Jika ada di request)
-        if ($request->has('cabang') && $request->cabang != '') {
+        // 2. Logika Filter Status
+        if ($request->has('status') && $request->status !== 'Semua') {
+            $query->where('status', $request->status);
+        }
+
+        // 3. Logika Filter Cabang (TAMBAHAN PENTING)
+        // Kita cek jika ada request 'cabang' dan tidak kosong
+        if ($request->filled('cabang')) {
             $query->where('cabang', $request->cabang);
         }
 
-        // 3. Ambil data dengan Pagination & Pertahankan Query String (untuk page 2, dst)
-        $pendaftar = $query->latest()
-                           ->paginate(10)
-                           ->withQueryString();
+        // 4. Logika SEARCH NAMA (BARU)
+        if ($request->filled('search')) {
+            $query->where('nama', 'like', '%' . $request->search . '%');
+        }
+        
+        // 4. Eksekusi Pagination
+        $pendaftar = $query->paginate(10)->appends($request->query());
 
-        // 4. Ambil semua data cabang untuk opsi dropdown
-        $cabangs = Cabang::all();
+        // 5. Ambil Data Cabang untuk Dropdown Filter
+        $cabangs = Cabang::all(); 
 
         return Inertia::render('Admin/PSB/Index', [
             'pendaftar' => $pendaftar,
-            'cabangs' => $cabangs, // <--- Kirim data cabang
-            'filters' => $request->only(['cabang']), // <--- Kirim status filter saat ini
+            'currentStatus' => $request->status ?? 'Semua',
+            
+            // --- KIRIM DATA INI AGAR TIDAK ERROR ---
+            'cabangs' => $cabangs, 
+            'filters' => $request->only(['status', 'cabang']), // Kirim filter yang sedang aktif
         ]);
     }
 

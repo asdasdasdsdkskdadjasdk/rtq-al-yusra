@@ -28,6 +28,9 @@ class HandleInertiaRequests extends Middleware
 
         $user = $request->user();
         
+        if ($user) {
+            $user->load('pendaftar');
+        }
         // --- 1. LOGIKA CEK LUNAS UANG MASUK (KODE LAMA) ---
         $isUangMasukLunas = false;
         if ($user && $user->role === 'wali_santri') {
@@ -93,6 +96,7 @@ class HandleInertiaRequests extends Middleware
                     'email' => $user->email,
                     'role' => $user->role,
                     'is_beasiswa' => $user->isBeasiswa(),
+                    'pendaftar' => $user->pendaftar,
                 ] : null,
                 
                 'is_uang_masuk_lunas' => $isUangMasukLunas,

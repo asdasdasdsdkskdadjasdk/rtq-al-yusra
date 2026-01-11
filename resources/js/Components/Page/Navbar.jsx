@@ -87,8 +87,12 @@ export default function Navbar({ auth, heroTheme}) {
     // ==========================================
     // LOGIKA PENAMBAHAN MENU (TANPA MENGHAPUS YANG LAMA)
     // ==========================================
-    const pendaftar = auth?.user?.pendaftar;
-    
+    //const pendaftar = auth?.user?.pendaftar;
+    const pendaftarList = auth?.user?.pendaftar;
+    const pendaftar = Array.isArray(pendaftarList) && pendaftarList.length > 0 
+        ? pendaftarList[pendaftarList.length - 1] 
+        : null;
+        
     // 1. Menu Dasar (Selalu Ada)
     const baseLinks = [
         { href: route('home'), text: 'Beranda' },

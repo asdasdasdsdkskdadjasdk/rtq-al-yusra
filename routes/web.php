@@ -26,6 +26,7 @@ use App\Http\Controllers\WaliSppController; // <--- Import Wali SPP
 use App\Http\Controllers\AdminSppController; // <--- Import Admin SPP
 use App\Http\Controllers\LaporanController; // <--- Import ini
 use App\Http\Controllers\KeuanganFormulirController; // <--- Import Ini
+use App\Http\Controllers\WaliMuridController;
 
 /*
 |--------------------------------------------------------------------------
@@ -103,6 +104,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/spp/pay-custom', [WaliSppController::class, 'payCustom'])->name('spp.pay_custom');
     Route::post('/spp/upload', [WaliSppController::class, 'storeUpload'])->name('spp.upload');
 
+    Route::middleware(['auth'])->group(function () {
+    // Menu Dashboard (Ringkasan)
+    Route::get('/dashboard-wali', [WaliMuridController::class, 'dashboard'])->name('wali.dashboard');
+    
+    // Menu Lihat Status Anak (Detail & History)
+    Route::get('/status-anak', [WaliMuridController::class, 'statusAnak'])->name('wali.status.anak');
+});
+
 });
 
 
@@ -126,6 +135,7 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
         Route::post('/manual', [AdminSppController::class, 'storeManual'])->name('manual');
         Route::post('/approve/{id}', [AdminSppController::class, 'approve'])->name('approve');
         Route::post('/reject/{id}', [AdminSppController::class, 'reject'])->name('reject');
+        Route::put('/{id}', [AdminSppController::class, 'update'])->name('update');
     });
     
     // --- ADMIN KEUANGAN (Laporan Umum) ---
@@ -139,6 +149,7 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
         ->group(function() {
             Route::get('/', 'index')->name('index');
             Route::get('/{id}', 'show')->name('show');
+            Route::put('/{id}', 'update')->name('update');
         });
     });
 
@@ -151,6 +162,9 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
         Route::post('/approve/{id}', 'approve')->name('approve');
         Route::post('/reject/{id}', 'reject')->name('reject');
         Route::post('/update-status/{id}', 'updateStatus')->name('update_status'); 
+        Route::put('/riwayat/{id}', 'updateHistory')->name('riwayat.update');
+        Route::delete('/riwayat/{id}', 'deleteHistory')->name('riwayat.destroy');
+
     });
 
     Route::controller(LaporanController::class)->prefix('laporan')->name('admin.laporan.')->group(function () {

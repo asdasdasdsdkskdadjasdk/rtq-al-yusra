@@ -425,50 +425,40 @@ class FormulirController extends Controller
     }
 
     public function downloadTemplate()
-    {
-        $user = Auth::user();
-        //$pendaftar = Pendaftar::where('user_id', $user->id)->latest()->first();
-        $pendaftar = Pendaftar::with('program')->where('user_id', $user->id)->latest()->first();
+{
+    $user = Auth::user();
+    // Load relasi program
+    $pendaftar = Pendaftar::with('program')->where('user_id', $user->id)->latest()->first();
 
-        //hapus
-        $pendaftar->load('program');
-        $pendaftar->program; // Pastikan relasi program dimuat
-        $pendaftar->tanggal_cetak = now()->translatedFormat('d F Y');
-        $pendaftar->nama_file = 'Surat_Pernyataan_' . str_replace(' ', '_', $pendaftar->nama) . '.pdf';
-        $pendaftar->nominal_spp_formatted = "Rp " . number_format(optional($pendaftar->program)->nominal_spp ?? 0, 0, ',', '.');
-        $pendaftar->nominal_uang_masuk_formatted = "Rp " . number_format(optional($pendaftar->program)->nominal_uang_masuk ?? 0, 0, ',', '.');
-        $pendaftar->nominal_uang_masuk_number = (int)(optional($pendaftar->program)->nominal_uang_masuk ?? 0);
-        $pendaftar->nominal_spp_number = (int)(optional($pendaftar->program)->nominal_spp ?? 0);
-        $pendaftar->program_nama = optional($pendaftar->program)->nama ?? '';
-        $pendaftar->program_jenis = optional($pendaftar->program)->jenis ?? '';
-        $pendaftar->program_durasi = optional($pendaftar->program)->durasi ?? '';
-        $pendaftar->program_biaya = optional($pendaftar->program)->biaya ?? '';
-        $pendaftar->program_materi_ujian = optional($pendaftar->program)->materi_ujian ?? '';
-        $pendaftar->program_keterangan = optional($pendaftar->program)->keterangan ?? '';
-        $pendaftar->program_slug = optional($pendaftar->program)->slug ?? '';
-        $pendaftar->program_id = optional($pendaftar->program)->id ?? null;
-        $pendaftar->program_nominal_uang_masuk = (int)(optional($pendaftar->program)->nominal_uang_masuk ?? 0);
-        $pendaftar->program_nominal_spp = (int)(optional($pendaftar->program)->nominal_spp ?? 0);
-        $pendaftar->program_biaya_clean = preg_replace('/[^0-9]/', '', optional($pendaftar->program)->biaya ?? '0');
-        $pendaftar->program_biaya_number = (int)$pendaftar->program_biaya_clean;
-        $pendaftar->program_uang_masuk = (int)(optional($pendaftar->program)->nominal_uang_masuk ?? 0);
-        $pendaftar->program_spp = (int)(optional($pendaftar->program)->nominal_spp ?? 0);
-        $pendaftar->program_biaya_number = (int)$pendaftar->program_biaya_clean;
-        $pendaftar->program_uang_masuk_formatted = "Rp " . number_format($pendaftar->program_uang_masuk, 0, ',', '.');
-        $pendaftar->program_spp_formatted = "Rp " . number_format($pendaftar->program_spp, 0, ',', '.');
-//hapus nanti
-
-        if (!$pendaftar) {
-            return redirect()->back()->with('error', 'Data pendaftaran tidak ditemukan.');
-        }
-
-        $pdf = Pdf::loadView('pdf.surat_pernyataan', [
-            'pendaftar' => $pendaftar,
-            'tanggal_cetak' => now()->translatedFormat('d F Y')
-        ]);
-
-        $pdf->setPaper('a4', 'portrait');
-
-        return $pdf->download('Surat_Pernyataan_' . str_replace(' ', '_', $pendaftar->nama) . '.pdf');
+    if (!$pendaftar) {
+        return redirect()->back()->with('error', 'Data pendaftaran tidak ditemukan.');
     }
+
+    // --- TAMBAHAN KODE FIX ---
+    // Jika relasi program kosong, tapi nama program ada
+    if (!$pendaftar->program && $pendaftar->program_nama) {
+        // Cari program asli di database berdasarkan nama
+        $programAsli = Program::where('nama', $pendaftar->program_nama)->first();
+        
+        if ($programAsli) {
+            // Update data pendaftar agar punya ID program
+            $pendaftar->program_id = $programAsli->id;
+            $pendaftar->save();
+            
+            // Refresh data agar relasi terbaca
+            $pendaftar->refresh(); 
+            $pendaftar->load('program'); 
+        }
+    }
+    // -------------------------
+
+    $pdf = Pdf::loadView('pdf.surat_pernyataan', [
+        'pendaftar' => $pendaftar,
+        'tanggal_cetak' => now()->translatedFormat('d F Y')
+    ]);
+
+    $pdf->setPaper('a4', 'portrait');
+
+    return $pdf->download('Surat_Pernyataan_' . str_replace(' ', '_', $pendaftar->nama) . '.pdf');
+}
 }

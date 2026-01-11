@@ -12,78 +12,118 @@ use Illuminate\Support\Facades\Storage;
 class AdminSppController extends Controller
 {
     /**
-     * Menampilkan Halaman Dashboard SPP untuk Admin Keuangan
+     * Menampilkan Halaman Dashboard SPP
      */
-    public function index()
+    public function index(Request $request)
     {
-        // 1. Ambil Data PENDING (Yang butuh persetujuan)
-        // Yaitu: Transfer Manual (Upload Bukti) & Midtrans Manual (Custom Nominal)
+        // 1. Ambil Parameter Filter dari URL
+        $search = $request->input('search');
+        $filterBulan = $request->input('bulan');
+
+        // 2. Ambil Data PENDING (Untuk Tab Approval Cepat)
+        // Data ini tetap diambil terpisah agar admin fokus ke yang butuh aksi
         $pending = SppTransaction::with('user')
             ->where('status', 'pending')
-            ->whereIn('tipe_pembayaran', ['midtrans_manual', 'transfer_manual']) 
-            ->latest()
+            ->orderBy('created_at', 'desc')
             ->get();
 
-        // 2. Ambil Data HISTORY (Yang sudah Lunas/Selesai)
-        $history = SppTransaction::with(['user', 'pencatat'])
-            ->where('status', 'approved')
-            ->latest()
-            ->get();
+        // 3. Ambil Data TRANSAKSI UTAMA (History)
+        // Ini yang support Search, Filter Bulan, dan Pagination
+        $query = SppTransaction::with(['user', 'pencatat']);
 
-        // 3. List Wali Santri (Untuk keperluan Input Manual Tunai)
-        $users = User::where('role', 'wali_santri')->select('id', 'name', 'email')->get();
+        // Logika Search Nama
+        if ($search) {
+            $query->whereHas('user', function($q) use ($search) {
+                $q->where('name', 'LIKE', "%{$search}%");
+            });
+        }
+
+        // Logika Filter Bulan
+        if ($filterBulan) {
+            $query->where('bulan', $filterBulan);
+        }
+
+        // Urutkan & Paginate (10 data per halaman)
+        $transactions = $query->orderBy('tahun', 'desc')
+            ->orderBy('bulan', 'desc')
+            ->latest()
+            ->paginate(10) 
+            ->withQueryString(); // Agar search tidak hilang saat klik page 2
+
+        // 4. List Siswa (Untuk Dropdown Input Manual)
+        $students = User::where('role', 'wali_santri')
+            ->orderBy('name')
+            ->select('id', 'name')
+            ->get();
 
         return Inertia::render('Admin/Spp/Index', [
             'pending' => $pending,
-            'history' => $history,
-            'users' => $users
+            'transactions' => $transactions, 
+            'students' => $students,
+            
+            // --- PENTING: Kirim ini agar tidak error di frontend ---
+            'filters' => $request->only(['search', 'bulan']), 
         ]);
     }
 
     /**
-     * LOGIKA APPROVE (TERIMA PEMBAYARAN)
-     * Dipanggil saat Admin klik tombol "Terima"
+     * UPDATE SPP (EDIT DATA & STATUS)
+     */
+    public function update(Request $request, $id)
+    {
+        $trx = SppTransaction::findOrFail($id);
+
+        $request->validate([
+            'nominal' => 'required|numeric|min:0',
+            'status' => 'required|in:pending,approved,rejected',
+            'keterangan' => 'nullable|string',
+        ]);
+
+        $trx->update([
+            'nominal' => $request->nominal,
+            'status' => $request->status,
+            'keterangan' => $request->keterangan,
+            // Jika diubah jadi approved, update pencatatnya
+            'pencatat_id' => ($request->status == 'approved') ? Auth::id() : $trx->pencatat_id,
+        ]);
+
+        return back()->with('success', 'Data SPP berhasil diperbarui.');
+    }
+
+    /**
+     * APPROVE
      */
     public function approve($id)
     {
         $trx = SppTransaction::findOrFail($id);
-        
-        // Update status jadi Lunas & Catat siapa admin yang menyetujui
         $trx->update([
             'status' => 'approved',
-            'pencatat_id' => Auth::id(), // ID Admin yang login
-            'keterangan' => $trx->keterangan . ' [Disetujui Admin]'
+            'pencatat_id' => Auth::id(),
+            'keterangan' => $trx->keterangan . ' [ACC Admin]'
         ]);
-
-        return back()->with('success', 'Pembayaran berhasil diterima & status menjadi Lunas.');
+        return back()->with('success', 'Pembayaran diterima.');
     }
 
     /**
-     * LOGIKA REJECT (TOLAK PEMBAYARAN)
-     * Dipanggil saat Admin klik tombol "Tolak"
+     * REJECT
      */
     public function reject($id)
     {
         $trx = SppTransaction::findOrFail($id);
         
-        // Hapus file bukti bayar dari server agar hemat storage
+        // Hapus file fisik jika ada
         if ($trx->bukti_bayar) {
             Storage::disk('public')->delete($trx->bukti_bayar);
         }
 
-        // Update status jadi Rejected
-        $trx->update([
-            'status' => 'rejected',
-            'pencatat_id' => Auth::id(),
-            'keterangan' => $trx->keterangan . ' [Ditolak Admin: Bukti tidak valid/Dana belum masuk]'
-        ]);
-
-        return back()->with('success', 'Pembayaran ditolak.');
+        // Hapus data dari database (atau ubah status jadi rejected jika mau soft delete)
+        $trx->delete(); 
+        
+        return back()->with('success', 'Pembayaran ditolak/dihapus.');
     }
 
     /**
-     * LOGIKA INPUT MANUAL (TUNAI)
-     * Dipanggil saat Admin mengisi form input manual
+     * INPUT MANUAL
      */
     public function storeManual(Request $request)
     {
@@ -95,14 +135,27 @@ class AdminSppController extends Controller
             'keterangan' => 'nullable|string'
         ]);
 
+        // Cek duplikat tagihan di bulan yang sama untuk user yang sama (Opsional)
+        /*
+        $exists = SppTransaction::where('user_id', $request->user_id)
+            ->where('bulan', $request->bulan)
+            ->where('tahun', $request->tahun)
+            ->where('status', '!=', 'rejected')
+            ->exists();
+        
+        if ($exists) {
+            return back()->with('error', 'SPP untuk periode tersebut sudah ada.');
+        }
+        */
+
         SppTransaction::create([
             'user_id' => $request->user_id,
             'bulan' => $request->bulan,
             'tahun' => $request->tahun,
-            'jumlah_bayar' => $request->jumlah_bayar,
+            'nominal' => $request->jumlah_bayar, // Frontend kirim 'jumlah_bayar', DB kolom 'nominal'
             'tipe_pembayaran' => 'admin_input',
-            'status' => 'approved', // Kalau input manual Admin, otomatis Lunas
-            'keterangan' => $request->keterangan ?? 'Pembayaran Tunai di Kantor',
+            'status' => 'approved', // Input admin otomatis Lunas
+            'keterangan' => $request->keterangan ?? 'Pembayaran Tunai',
             'pencatat_id' => Auth::id()
         ]);
 
