@@ -18,7 +18,7 @@ jobs:
       - name: ⚡ Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2' # PASTIKAN: Versi PHP di cPanel juga harus 8.2
+          php-version: '8.3' # PASTIKAN: Versi PHP di cPanel juga harus 8.2
           extensions: mbstring, intl, pdo, pdo_mysql
 
       - name: 📦 Install Composer Dependencies
