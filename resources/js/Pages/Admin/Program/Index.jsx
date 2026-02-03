@@ -3,7 +3,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import PrimaryButton from '@/Components/PrimaryButton';
 
 export default function Index({ auth, programs, flash = {} }) {
-    
+
     const handleDelete = (id) => {
         if (confirm('Apakah Anda yakin ingin menghapus program ini?')) {
             router.delete(route('admin.program.destroy', id), {
@@ -19,20 +19,20 @@ export default function Index({ auth, programs, flash = {} }) {
 
     return (
         <AuthenticatedLayout
-            auth={auth} 
+            auth={auth}
             header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Manajemen Program Pendaftaran</h2>}
         >
             <Head title="Admin Program" />
 
             <div className="py-12">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                    
+
                     {flash.success && (
-                        <div className="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded relative">
+                        <div className="mb-4 p-4 bg-orange-100 border border-orange-400 text-orange-700 rounded relative">
                             {flash.success}
                         </div>
                     )}
-                    
+
                     <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-lg font-medium">Daftar Program</h3>
@@ -63,20 +63,20 @@ export default function Index({ auth, programs, flash = {} }) {
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-bold">
                                                 {formatRupiah(program.nominal_uang_masuk)}
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-bold">
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-orange-600 font-bold">
                                                 {formatRupiah(program.nominal_spp)}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="w-6 h-6 rounded-full border border-gray-300" style={{ backgroundColor: program.color }}></div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
-                                                <Link 
+                                                <Link
                                                     href={route('admin.program.edit', program.id)}
-                                                    className="text-indigo-600 hover:text-indigo-900 bg-indigo-50 px-3 py-1 rounded-md"
+                                                    className="text-orange-600 hover:text-orange-900 bg-orange-50 px-3 py-1 rounded-md"
                                                 >
                                                     Edit
                                                 </Link>
-                                                <button 
+                                                <button
                                                     onClick={() => handleDelete(program.id)}
                                                     className="text-red-600 hover:text-red-900 bg-red-50 px-3 py-1 rounded-md border border-red-200"
                                                 >

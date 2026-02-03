@@ -25,6 +25,8 @@ class PaymentController extends Controller
         // Setup Config agar Client Key di frontend sesuai
         Config::$serverKey = config('midtrans.server_key');
         Config::$isProduction = config('midtrans.is_production');
+
+
         
         return Inertia::render('Pembayaran', [
             'pendaftar' => $pendaftar,
@@ -85,12 +87,32 @@ class PaymentController extends Controller
                             ->first();
             
             if ($pendaftar) {
-                if ($transactionStatus == 'success') {
+                if ($transactionStatus == 'success') { // 'success' covers both 'capture' and 'settlement' based on earlier logic
                     $pendaftar->update([
                         'status_pembayaran' => 'Lunas',
                         'status' => 'Menunggu Verifikasi'
                     ]);
                     Log::info("Pendaftaran Lunas: $realNoPendaftaran");
+
+                    // Notif ke User
+                    if ($pendaftar->user) {
+                        $pendaftar->user->notify(new GeneralNotification(
+                            "Pembayaran Formulir Berhasil.",
+                            route('dashboard'),
+                            'success'
+                        ));
+                    }
+
+                    // Notif ke Admin Keuangan
+                    $admins = \App\Models\User::where('role', 'keuangan')->get();
+                    foreach ($admins as $admin) {
+                        $admin->notify(new GeneralNotification(
+                            "Pembayaran Formulir Masuk: {$pendaftar->nama}",
+                            route('admin.keuangan.formulir.index'),
+                            'info'
+                        ));
+                    }
+
                 } elseif ($transactionStatus == 'failure') {
                     $pendaftar->update(['status_pembayaran' => 'Gagal']);
                 }
@@ -105,7 +127,7 @@ class PaymentController extends Controller
                 $uangMasukId = $parts[1]; // ID ada di tengah
                 $uangMasuk = UangMasuk::find($uangMasukId);
 
-                if ($uangMasuk && $transactionStatus == 'success') {
+                if ($uangMasuk && $transactionStatus == 'success') { // 'success' covers both 'capture' and 'settlement'
                     DB::transaction(function () use ($uangMasuk, $notif, $orderId) {
                         // Cek Idempotency (Mencegah double input)
                         $cekDouble = RiwayatUangMasuk::where('keterangan', 'LIKE', "%$orderId%")->exists();
@@ -132,6 +154,25 @@ class PaymentController extends Controller
                             $uangMasuk->save();
                             
                             Log::info("Cicilan Uang Masuk Berhasil: Rp " . $notif->gross_amount);
+
+                            // Notif User
+                            if ($uangMasuk->user) {
+                                $uangMasuk->user->notify(new \App\Notifications\GeneralNotification(
+                                   "Pembayaran Uang Masuk via Midtrans Berhasil.",
+                                   route('wali.uang-masuk.index'),
+                                   'success'
+                               ));
+                            }
+                           
+                           // Notif Admin
+                           $admins = \App\Models\User::where('role', 'keuangan')->get();
+                           foreach ($admins as $admin) {
+                               $admin->notify(new \App\Notifications\GeneralNotification(
+                                   "Uang Masuk Midtrans: Rp " . number_format($notif->gross_amount),
+                                   route('admin.uang_masuk.index'),
+                                   'info'
+                               ));
+                           }
                         }
                     });
                 }
@@ -166,9 +207,80 @@ class PaymentController extends Controller
                         ]);
                         Log::info("SPP Custom Masuk (Pending Verif): ID $trxId");
                     }
+                    
+                    // Notif User (General Update)
+                    if ($sppTrx->user) {
+                         $msg = ($sppTrx->tipe_pembayaran == 'midtrans_auto') 
+                            ? "Pembayaran SPP Bulan {$sppTrx->bulan} Berhasil." 
+                            : "Pembayaran SPP Custom Bulan {$sppTrx->bulan} Diterima System. Menunggu Verifikasi Admin.";
+                            
+                        $sppTrx->user->notify(new \App\Notifications\GeneralNotification(
+                            $msg,
+                            route('wali.spp.index'),
+                            'success'
+                        ));
+                    }
+
+                    // Notif Admin
+                    $admins = \App\Models\User::where('role', 'keuangan')->get();
+                    foreach ($admins as $admin) {
+                        $admin->notify(new \App\Notifications\GeneralNotification(
+                            "SPP Midtrans Bulan {$sppTrx->bulan} Masuk.",
+                            route('admin.spp.index'),
+                            'info' // Info untuk auto, atau bisa warning jika manual needed
+                        ));
+                    }
 
                 } elseif ($transactionStatus == 'failure') {
                     $sppTrx->update(['status' => 'rejected']);
+                }
+            }
+        }
+
+        // --- KASUS D: Pembayaran Daftar Ulang (DU-...) [BARU] ---
+        elseif (str_starts_with($orderId, 'DU-')) {
+            // Format: DU-{ID_Tagihan}-{Timestamp}
+            $parts = explode('-', $orderId);
+            $tagihanId = $parts[1]; // ID Tagihan ada di index 1 (DU, 12, timestamp)
+            
+            $tagihan = \App\Models\DaftarUlang::find($tagihanId); // Gunakan FQCN atau import di atas jika perlu
+
+            if ($tagihan) {
+                if ($transactionStatus == 'success') {
+                    // Update status lunas & nominal
+                    $tagihan->update([
+                        'status' => 'lunas',
+                        'nominal_bayar' => $notif->gross_amount, // Simpan nominal yang dibayar
+                        'keterangan' => "Lunas via Midtrans (Order: $orderId)"
+                    ]);
+                    
+                    Log::info("Daftar Ulang Lunas: ID $tagihanId");
+
+                    // Notif ke User (Wali Santri)
+                    $user = \App\Models\User::find($tagihan->user_id);
+                    if ($user) {
+                        $user->notify(new \App\Notifications\GeneralNotification(
+                            "Pembayaran Daftar Ulang Tahun {$tagihan->tahun} Berhasil.",
+                            route('wali.daftar-ulang.index'),
+                            'success'
+                        ));
+                    }
+
+                    // Notif ke Admin Keuangan
+                    $admins = \App\Models\User::where('role', 'keuangan')->get();
+                    foreach ($admins as $admin) {
+                        $admin->notify(new \App\Notifications\GeneralNotification(
+                            "Daftar Ulang Midtrans (Tahun {$tagihan->tahun}) Masuk: Rp " . number_format($notif->gross_amount),
+                            '/admin/daftar-ulang', // Sesuaikan URL admin
+                            'info'
+                        ));
+                    }
+
+                } elseif ($transactionStatus == 'failure') {
+                    // Jika gagal, mungkin tidak perlu ubah status jadi rejected kalau asalnya pending? 
+                    // Atau biarkan user coba lagi. Tapi status 'pending' midtrans dan 'pending' app beda makna.
+                    // Biarkan status app tetap 'pending' agar bisa coba bayar lagi, cuma log failure.
+                    Log::warning("Pembayaran Daftar Ulang Gagal/Expire: $orderId");
                 }
             }
         }

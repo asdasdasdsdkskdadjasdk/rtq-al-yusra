@@ -43,43 +43,43 @@ export default function Footer() {
     if (sekolah.facebook) socialLinks.push({ name: 'Facebook', href: sekolah.facebook, icon: FacebookIcon });
     if (sekolah.instagram) socialLinks.push({ name: 'Instagram', href: sekolah.instagram, icon: InstagramIcon });
     if (sekolah.youtube) socialLinks.push({ name: 'YouTube', href: sekolah.youtube, icon: YouTubeIcon });
-    
+
     // Gunakan Link WA yang sudah diformat
-    if (sekolah.no_hp) socialLinks.push({ 
-        name: 'WhatsApp', 
-        href: whatsappLink, 
-        icon: WhatsAppIcon 
+    if (sekolah.no_hp) socialLinks.push({
+        name: 'WhatsApp',
+        href: whatsappLink,
+        icon: WhatsAppIcon
     });
 
     const googleMapsEmbedUrl = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3989.65086910485!2d101.43044257496473!3d0.5249364994699299!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31d5ab6bbb930ac3%3A0xf98043ac3549b8ef!2sRTQ%20AL%20YUSRA%20(%20Rumah%20Tahfidz%20Quran)!5e0!3m2!1sid!2sid!4v1764551694201!5m2!1sid!2sid";
 
     // --- Setup Animasi ---
     const { ref, inView } = useInView({
-        triggerOnce: true, 
-        threshold: 0.1,    
+        triggerOnce: true,
+        threshold: 0.1,
     });
 
     const footerVariants = {
-        hidden: { opacity: 0, y: 50 }, 
-        visible: { opacity: 1, y: 0 },  
+        hidden: { opacity: 0, y: 50 },
+        visible: { opacity: 1, y: 0 },
     };
 
     return (
-        <footer className="bg-gray-50 bg-dots-pattern bg-dots-size bg-repeat overflow-hidden "> 
+        <footer className="bg-gray-50 bg-dots-pattern bg-dots-size bg-repeat overflow-hidden ">
 
-            <div className="container mx-auto px-4"> 
+            <div className="container mx-auto px-4">
 
-                <motion.div 
-                    ref={ref} 
+                <motion.div
+                    ref={ref}
                     initial="hidden"
-                    animate={inView ? 'visible' : 'hidden'} 
+                    animate={inView ? 'visible' : 'hidden'}
                     variants={footerVariants}
-                    transition={{ duration: 0.8, ease: "easeOut" }} 
+                    transition={{ duration: 0.8, ease: "easeOut" }}
 
-                    className="relative bg-cover bg-center text-white rounded-2xl overflow-hidden shadow-lg" 
+                    className="relative bg-cover bg-center text-white rounded-2xl overflow-hidden shadow-lg"
                     style={{ backgroundImage: "url('/images/rtq.jpg')" }}
                 >
-                        <div className="absolute inset-0 bg-black/60"></div>
+                    <div className="absolute inset-0 bg-black/60"></div>
 
                     <div className="relative p-8 md:p-12">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12">
@@ -154,7 +154,7 @@ export default function Footer() {
 
                         </div>
                     </div>
-                </motion.div> 
+                </motion.div>
             </div>
 
             <div className="bg-gray-50 py-4">

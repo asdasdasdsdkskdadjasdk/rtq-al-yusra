@@ -182,6 +182,16 @@ class AdminUangMasukController extends Controller
         $uangMasuk = UangMasuk::findOrFail($id);
         $uangMasuk->status = $request->status;
         $uangMasuk->save();
+
+        if ($request->status !== 'pending') {
+        $msg = $request->status == 'approved' 
+            ? "Pembayaran uang masuk Diterima." 
+            : "Pembayaran uang masuk Ditolak. Mohon cek bukti transfer.";
+            
+        $type = $request->status == 'approved' ? 'success' : 'error';
+
+        $trx->user->notify(new GeneralNotification($msg, route('wali.spp.index'), $type));
+    }
         return back()->with('success', 'Status berhasil diubah.');
     }
 
@@ -209,16 +219,44 @@ class AdminUangMasukController extends Controller
                     }
                 }
                 $uangMasuk->save();
+
+                // Notify User
+                if($uangMasuk->user) {
+                    $uangMasuk->user->notify(new \App\Notifications\GeneralNotification(
+                        "Pembayaran Uang Masuk Sebesar Rp " . number_format($riwayat->jumlah_bayar) . " Diterima.",
+                        route('wali.uang-masuk.index'),
+                        'success'
+                    ));
+                }
             }
         });
         return back()->with('success', 'Pembayaran disetujui.');
     }
 
     public function reject($id) {
-        $riwayat = RiwayatUangMasuk::findOrFail($id);
+        $riwayat = RiwayatUangMasuk::with('uangMasuk.user')->findOrFail($id);
+        
+        // Simpan user untuk notifikasi
+        $user = $riwayat->uangMasuk ? $riwayat->uangMasuk->user : null;
+
         if ($riwayat->bukti_bayar) Storage::disk('public')->delete($riwayat->bukti_bayar);
-        $riwayat->delete(); 
-        return back()->with('success', 'Ditolak.');
+        
+        // Ubah jadi rejected, jangan delete
+        $riwayat->update([
+            'status' => 'rejected',
+            'bukti_bayar' => null,
+            'keterangan' => $riwayat->keterangan . ' [Ditolak Admin]'
+        ]);
+
+        if ($user) {
+             $user->notify(new \App\Notifications\GeneralNotification(
+                "Pembayaran Uang Masuk Ditolak. Silakan cek kembali.",
+                route('wali.uang-masuk.index'),
+                'error'
+            ));
+        }
+
+        return back()->with('success', 'Ditolak dan notifikasi dikirim.');
     }
 
     /**

@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Pendaftar;
 use App\Models\Program;
+use App\Models\User; // <--- TAMBAHAN 1
+use App\Notifications\GeneralNotification; // <--- TAMBAHAN 2
 use App\Models\Jadwal;
 use App\Models\Cabang; 
 use App\Models\UangMasuk;
@@ -11,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
 use Inertia\Inertia;
 use Midtrans\Config;
 use Midtrans\Snap;
@@ -86,13 +89,13 @@ class FormulirController extends Controller
     {
         // 1. Validasi Input
         $validatedData = $request->validate([
-            'nik' => 'required|string|max:16', 
+            'nik' => 'required|numeric|digits:16', // Harus angka, tepat 16 digit
             'nama' => 'required|string|max:255',
-            'no_hp' => 'required|string|max:20',
-            'email' => 'required|email|max:255',
+            'no_hp' => ['required', 'numeric', 'digits_between:10,15', 'regex:/^08[0-9]+$/'], // Angka, 10-15 digit, mulai 08
+            'email' => 'required|email:dns|max:255', // Validasi DNS email
             'tempat_lahir' => 'required|string|max:255',
             'tanggal_lahir' => 'required|date',
-            'umur' => 'required|integer|min:0',
+            'umur' => 'required|integer|min:1', // Angka
             'jenis_kelamin' => 'required|string',
             'alamat' => 'required|string',
             'cabang' => 'required|string|max:255',
@@ -213,6 +216,29 @@ class FormulirController extends Controller
                     Log::error('Midtrans Error: ' . $e->getMessage());
                 }
             }
+
+            // 4. KIRIM NOTIFIKASI KE ADMIN PSB (UPDATE DISINI)
+            // Di-comment agar tidak double dengan Notifikasi Dinamis (HandleInertiaRequests)
+            /* 
+            $adminPsb = User::where('role', 'psb')->get();
+            
+            foreach ($adminPsb as $admin) {
+                $admin->notify(new GeneralNotification(
+                    "Pendaftar Baru: {$pendaftar->nama} (Program ID: {$pendaftar->program_id})",
+                    route('psb.pendaftaran.index', ['status' => 'Menunggu Verifikasi']), // Link filter langsung
+                    'info'
+                ));
+            }
+            */
+
+            // 5. Notifikasi Balik ke Wali Santri (Opsional)
+            $user = Auth::user();
+            $user->notify(new GeneralNotification(
+                "Formulir pendaftaran berhasil dikirim. Silakan tunggu verifikasi admin.",
+                route('dashboard'),
+                'success'
+            ));
+
             return redirect()->route('pembayaran.show', ['id' => $pendaftar->id]);
         } 
         
@@ -392,6 +418,15 @@ class FormulirController extends Controller
                 'status' => 'Sudah Daftar Ulang'
             ]);
 
+            $adminPsb = User::where('role', 'psb')->get();
+                foreach ($adminPsb as $admin) {
+                    $admin->notify(new GeneralNotification(
+                        "Daftar Ulang Masuk: {$pendaftar->nama} telah mengunggah berkas.",
+                        route('psb.pendaftaran.show', $pendaftar->id), // Link ke detail santri
+                        'success'
+                    ));
+                }
+
             // --- [FITUR BARU] TAGIHAN UANG MASUK (DINAMIS) ---
             $program = $pendaftar->program;
             $nominalTagihan = 5000000; // Default Safety
@@ -419,6 +454,51 @@ class FormulirController extends Controller
 
             // Ubah Role User Jadi Wali Santri
             $user->update(['role' => 'wali_santri']); 
+
+            // --- SYNC API: Create Santri in External System ---
+            try {
+                $apiKey  = config('services.santri_api.api_key');
+                $baseUrl = config('services.santri_api.base_url');
+                
+                // Map Data Pendaftar -> Payload API
+                $jkMap = ($pendaftar->jenis_kelamin === 'Laki-laki') ? 'L' : 'P';
+                
+                $payload = [
+                    'nama_santri'   => $pendaftar->nama,
+                    'tempat_lahir'  => $pendaftar->tempat_lahir ?? '-',
+                    'tanggal_lahir' => $pendaftar->tanggal_lahir, 
+                    'jenis_kelamin' => $jkMap,
+                    'email'         => $pendaftar->email ?? '-',
+                    'NoHP_ortu'     => $pendaftar->no_hp ?? '-',
+                    'nama_ortu'     => $pendaftar->nama_orang_tua ?? '-',
+                    'cabang'        => $pendaftar->cabang ?? '-',
+                    'jenis_kelas'   => $pendaftar->program_jenis ?? 'Reguler',
+                    'kat_masuk'     => 'Baru',
+                    'alamat'        => $pendaftar->alamat ?? '-',
+                    
+                    // --- TAMBAHAN WAJIB (FIX 422) ---
+                    'nis'            => date('Y') . sprintf('%04d', $pendaftar->id), // Generate NIS Sementara
+                    'GolDar'         => $pendaftar->gol_darah ?? '-',
+                    'MK'             => $pendaftar->anak_ke ?? '1',
+                    'asal_sekolah'   => $pendaftar->asal_sekolah ?? '-',
+                    'pekerjaan_ortu' => $pendaftar->pekerjaan_orang_tua ?? 'Lainnya',
+                    'asal'           => $pendaftar->kabupaten ?? 'Pusat', // Dari alamat/kabupaten
+                    'kelas'          => '1', // Default kelas awal
+                    'periode_id'     => 1,   // Default periode aktif
+                ];
+
+                // Fire & Forget (Log error if fails)
+                $response = Http::withHeaders(['X-API-KEY' => $apiKey])->post($baseUrl, $payload);
+                
+                if (!$response->successful()) {
+                    Log::error("Failed to sync santri to API. Status: " . $response->status() . " Body: " . $response->body());
+                } else {
+                    Log::info("Successfully synced santri to API: " . $pendaftar->nama);
+                }
+
+            } catch (\Exception $e) {
+                Log::error("Error syncing santri to API: " . $e->getMessage());
+            }
         }
 
         return redirect()->route('status.cek')->with('success', 'Alhamdulillah, proses daftar ulang berhasil! Menu pembayaran Uang Masuk kini tersedia.');

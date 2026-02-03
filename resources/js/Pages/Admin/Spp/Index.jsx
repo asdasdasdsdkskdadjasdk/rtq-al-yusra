@@ -4,61 +4,71 @@ import { Head, useForm, Link, router } from '@inertiajs/react';
 import Modal from '@/Components/Modal';
 
 export default function AdminSppIndex({ auth, transactions, pending, students, filters }) {
-    
+
     // --- STATE ---
     const [activeTab, setActiveTab] = useState('pending'); // Default ke tab Approval
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [filterBulan, setFilterBulan] = useState(filters.bulan || '');
+    const [filterTahun, setFilterTahun] = useState(filters.tahun || ''); // State Tahun
 
     // --- STATE MODAL ---
     const [showManualModal, setShowManualModal] = useState(false);
-    const [editingTrx, setEditingTrx] = useState(null); 
+    const [editingTrx, setEditingTrx] = useState(null);
 
     // --- FORM 1: INPUT MANUAL ---
-    const { 
-        data: manualData, setData: setManualData, 
-        post: postManual, processing: procManual, reset: resetManual 
+    const {
+        data: manualData, setData: setManualData,
+        post: postManual, processing: procManual, reset: resetManual, transform: transformManual
     } = useForm({
-        user_id: '', 
-        bulan: new Date().getMonth() + 1, 
-        tahun: new Date().getFullYear(), 
-        jumlah_bayar: '', 
+        user_id: '',
+        bulan: new Date().getMonth() + 1,
+        tahun: new Date().getFullYear(),
+        jumlah_bayar: '',
         keterangan: ''
     });
 
     // --- FORM 2: EDIT TRANSAKSI ---
-    const { 
-        data: editData, setData: setEditData, 
-        put: putEdit, processing: procEdit, reset: resetEdit 
+    const {
+        data: editData, setData: setEditData,
+        put: putEdit, processing: procEdit, reset: resetEdit, transform: transformEdit
     } = useForm({
-        nominal: '', 
-        status: '', 
+        nominal: '',
+        status: '',
         keterangan: ''
     });
+
+    // --- HELPER FORMAT CURRENCY INPUT ---
+    const formatCurrencyInput = (value) => {
+        return value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    };
 
     // --- EFFECT: DEBOUNCE SEARCH (Hanya jalan di Tab History) ---
     useEffect(() => {
         const delayDebounceFn = setTimeout(() => {
-            if (searchTerm !== (filters.search || '') || filterBulan !== (filters.bulan || '')) {
+            if (searchTerm !== (filters.search || '') || filterBulan !== (filters.bulan || '') || filterTahun !== (filters.tahun || '')) {
                 router.get(
                     route('admin.spp.index'),
-                    { search: searchTerm, bulan: filterBulan },
+                    { search: searchTerm, bulan: filterBulan, tahun: filterTahun },
                     { preserveState: true, preserveScroll: true, replace: true }
                 );
             }
         }, 500);
         return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm, filterBulan]);
+    }, [searchTerm, filterBulan, filterTahun]);
 
     // --- HANDLERS ---
 
     const handleManualSubmit = (e) => {
         e.preventDefault();
+        transformManual((data) => ({
+            ...data,
+            jumlah_bayar: data.jumlah_bayar.toString().replace(/\./g, '')
+        }));
         postManual(route('admin.spp.manual'), {
-            onSuccess: () => { 
-                setShowManualModal(false); 
-                resetManual(); 
-                alert('Pembayaran berhasil dicatat!'); 
+            onSuccess: () => {
+                setShowManualModal(false);
+                resetManual();
+                alert('Pembayaran berhasil dicatat!');
                 setActiveTab('history');
             }
         });
@@ -67,7 +77,7 @@ export default function AdminSppIndex({ auth, transactions, pending, students, f
     const openEditModal = (item) => {
         setEditingTrx(item);
         setEditData({
-            nominal: item.jumlah_bayar, // Pastikan ini sesuai kolom DB (jumlah_bayar/nominal)
+            nominal: formatCurrencyInput(item.jumlah_bayar.toString()), // FORMAT AWAL
             status: item.status,
             keterangan: item.keterangan || ''
         });
@@ -76,6 +86,10 @@ export default function AdminSppIndex({ auth, transactions, pending, students, f
     const handleEditSubmit = (e) => {
         e.preventDefault();
         if (!editingTrx) return;
+        transformEdit((data) => ({
+            ...data,
+            nominal: data.nominal.toString().replace(/\./g, '')
+        }));
         putEdit(route('admin.spp.update', editingTrx.id), {
             onSuccess: () => { setEditingTrx(null); resetEdit(); }
         });
@@ -98,14 +112,16 @@ export default function AdminSppIndex({ auth, transactions, pending, students, f
         const value = Number(angka);
         return isNaN(value) ? 'Rp 0' : new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(value);
     };
-    
+
     const getNamaBulan = (angka) => {
         const date = new Date();
         date.setMonth(angka - 1);
         return date.toLocaleString('id-ID', { month: 'long' });
     };
 
-    const listBulan = Array.from({length: 12}, (_, i) => i + 1);
+    const listBulan = Array.from({ length: 12 }, (_, i) => i + 1);
+    const currentYear = new Date().getFullYear();
+    const listTahun = Array.from({ length: 5 }, (_, i) => currentYear - i); // 5 Tahun terakhir
 
     return (
         <AuthenticatedLayout
@@ -116,18 +132,18 @@ export default function AdminSppIndex({ auth, transactions, pending, students, f
 
             <div className="py-12">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-                    
+
                     {/* --- TABS NAVIGATION --- */}
                     <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                         <div className="flex space-x-1 bg-gray-200 p-1 rounded-xl w-fit">
-                            <button onClick={() => setActiveTab('pending')} className={`px-4 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'pending' ? 'bg-white text-blue-600 shadow' : 'text-gray-600 hover:bg-gray-300'}`}>
-                                Butuh Approval 
+                            <button onClick={() => setActiveTab('pending')} className={`px-4 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'pending' ? 'bg-white text-orange-600 shadow' : 'text-gray-600 hover:bg-gray-300'}`}>
+                                Butuh Approval
                                 {pending.length > 0 && <span className="ml-2 bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full animate-pulse">{pending.length}</span>}
                             </button>
-                            <button onClick={() => setActiveTab('history')} className={`px-4 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'history' ? 'bg-white text-blue-600 shadow' : 'text-gray-600 hover:bg-gray-300'}`}>
+                            <button onClick={() => setActiveTab('history')} className={`px-4 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'history' ? 'bg-white text-orange-600 shadow' : 'text-gray-600 hover:bg-gray-300'}`}>
                                 Daftar Transaksi
                             </button>
-                            <button onClick={() => setActiveTab('manual')} className={`px-4 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'manual' ? 'bg-white text-blue-600 shadow' : 'text-gray-600 hover:bg-gray-300'}`}>
+                            <button onClick={() => setActiveTab('manual')} className={`px-4 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'manual' ? 'bg-white text-orange-600 shadow' : 'text-gray-600 hover:bg-gray-300'}`}>
                                 + Input Manual
                             </button>
                         </div>
@@ -156,10 +172,10 @@ export default function AdminSppIndex({ auth, transactions, pending, students, f
                                         <tr key={item.id} className="bg-white hover:bg-gray-50 border-b">
                                             <td className="px-6 py-4">{new Date(item.created_at).toLocaleDateString('id-ID')}</td>
                                             <td className="px-6 py-4 font-bold text-gray-900">{item.user?.name}</td>
-                                            <td className="px-6 py-4"><span className="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-1 rounded">{getNamaBulan(item.bulan)} {item.tahun}</span></td>
+                                            <td className="px-6 py-4"><span className="bg-orange-100 text-orange-800 text-xs font-bold px-2 py-1 rounded">{getNamaBulan(item.bulan)} {item.tahun}</span></td>
                                             <td className="px-6 py-4 text-green-600 font-bold">{formatRupiah(item.jumlah_bayar)}</td>
                                             <td className="px-6 py-4">
-                                                {item.bukti_bayar ? <a href={`/storage/${item.bukti_bayar}`} target="_blank" className="text-blue-600 hover:underline text-xs">Lihat Bukti</a> : <span className="text-gray-400 text-xs italic">-</span>}
+                                                {item.bukti_bayar ? <a href={`/storage/${item.bukti_bayar}`} target="_blank" className="text-orange-600 hover:underline text-xs">Lihat Bukti</a> : <span className="text-gray-400 text-xs italic">-</span>}
                                             </td>
                                             <td className="px-6 py-4 flex justify-center gap-2">
                                                 <button onClick={() => handleApprove(item.id)} className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-xs font-bold shadow">Terima</button>
@@ -179,11 +195,15 @@ export default function AdminSppIndex({ auth, transactions, pending, students, f
                         <div className="space-y-4">
                             {/* Filter Bar */}
                             <div className="flex flex-col md:flex-row gap-2 bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                                <select value={filterBulan} onChange={(e) => setFilterBulan(e.target.value)} className="border-gray-300 rounded-lg text-sm focus:ring-blue-500">
+                                <select value={filterBulan} onChange={(e) => setFilterBulan(e.target.value)} className="border-gray-300 rounded-lg text-sm focus:ring-orange-500">
                                     <option value="">Semua Bulan</option>
                                     {listBulan.map(b => <option key={b} value={b}>{getNamaBulan(b)}</option>)}
                                 </select>
-                                <input type="text" placeholder="Cari Nama Santri..." className="border-gray-300 rounded-lg text-sm w-full md:w-64 focus:ring-blue-500" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                                <select value={filterTahun} onChange={(e) => setFilterTahun(e.target.value)} className="border-gray-300 rounded-lg text-sm focus:ring-orange-500">
+                                    <option value="">Semua Tahun</option>
+                                    {listTahun.map(t => <option key={t} value={t}>{t}</option>)}
+                                </select>
+                                <input type="text" placeholder="Cari Nama Santri..." className="border-gray-300 rounded-lg text-sm w-full md:w-64 focus:ring-orange-500" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                             </div>
 
                             {/* Table */}
@@ -216,7 +236,7 @@ export default function AdminSppIndex({ auth, transactions, pending, students, f
                                                     </td>
                                                     <td className="px-6 py-4 text-xs italic max-w-xs truncate">{item.keterangan || '-'}</td>
                                                     <td className="px-6 py-4 text-center">
-                                                        <button onClick={() => openEditModal(item)} className="text-blue-600 hover:text-blue-900 font-medium text-xs underline">Edit</button>
+                                                        <button onClick={() => openEditModal(item)} className="bg-orange-50 text-orange-700 hover:bg-orange-100 px-3 py-1 rounded font-bold text-xs transition">Edit</button>
                                                     </td>
                                                 </tr>
                                             )) : (
@@ -230,7 +250,7 @@ export default function AdminSppIndex({ auth, transactions, pending, students, f
                                     <div className="p-4 border-t bg-gray-50 flex justify-center gap-1">
                                         {transactions.links.map((link, k) => (
                                             link.url ? (
-                                                <Link key={k} href={link.url} dangerouslySetInnerHTML={{ __html: link.label }} className={`px-3 py-1 text-xs border rounded transition ${link.active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 hover:bg-gray-100'}`} />
+                                                <Link key={k} href={link.url} dangerouslySetInnerHTML={{ __html: link.label }} className={`px-3 py-1 text-xs border rounded transition ${link.active ? 'bg-orange-600 text-white border-orange-600' : 'bg-white text-gray-600 hover:bg-gray-100'}`} />
                                             ) : (
                                                 <span key={k} dangerouslySetInnerHTML={{ __html: link.label }} className="px-3 py-1 text-xs border rounded bg-gray-100 text-gray-400 cursor-not-allowed" />
                                             )
@@ -265,14 +285,21 @@ export default function AdminSppIndex({ auth, transactions, pending, students, f
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Nominal (Rp)</label>
-                                    <input type="number" className="w-full mt-1 border-gray-300 rounded-md font-bold" value={manualData.jumlah_bayar} onChange={e => setManualData('jumlah_bayar', e.target.value)} placeholder="Contoh: 300000" required />
+                                    <input
+                                        type="text"
+                                        className="w-full mt-1 border-gray-300 rounded-md font-bold"
+                                        value={manualData.jumlah_bayar}
+                                        onChange={e => setManualData('jumlah_bayar', formatCurrencyInput(e.target.value))}
+                                        placeholder="Contoh: 300.000"
+                                        required
+                                    />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Keterangan</label>
                                     <textarea className="w-full mt-1 border-gray-300 rounded-md" value={manualData.keterangan} onChange={e => setManualData('keterangan', e.target.value)} rows="2"></textarea>
                                 </div>
                                 <div className="flex justify-end gap-2">
-                                    <button disabled={procManual} className="px-4 py-2 bg-blue-600 text-white rounded-md font-bold hover:bg-blue-700">{procManual ? 'Menyimpan...' : 'Simpan Pembayaran'}</button>
+                                    <button disabled={procManual} className="px-4 py-2 bg-orange-600 text-white rounded-md font-bold hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed">{procManual ? 'Menyimpan...' : 'Simpan Pembayaran'}</button>
                                 </div>
                             </form>
                         </div>
@@ -284,7 +311,7 @@ export default function AdminSppIndex({ auth, transactions, pending, students, f
             <Modal show={!!editingTrx} onClose={() => setEditingTrx(null)}>
                 <div className="p-6">
                     <h2 className="text-lg font-bold mb-4 text-gray-900">Edit Data Transaksi</h2>
-                    {editingTrx && <div className="bg-blue-50 p-3 rounded-lg mb-4 text-sm text-blue-800"><p><strong>Santri:</strong> {editingTrx.user?.name}</p><p><strong>Periode:</strong> {getNamaBulan(editingTrx.bulan)} {editingTrx.tahun}</p></div>}
+                    {editingTrx && <div className="bg-orange-50 p-3 rounded-lg mb-4 text-sm text-orange-800"><p><strong>Santri:</strong> {editingTrx.user?.name}</p><p><strong>Periode:</strong> {getNamaBulan(editingTrx.bulan)} {editingTrx.tahun}</p></div>}
                     <form onSubmit={handleEditSubmit} className="space-y-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700">Status Pembayaran</label>
@@ -296,7 +323,13 @@ export default function AdminSppIndex({ auth, transactions, pending, students, f
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700">Nominal (Rp)</label>
-                            <input type="number" className="w-full mt-1 border-gray-300 rounded-md font-bold" value={editData.nominal} onChange={e => setEditData('nominal', e.target.value)} required />
+                            <input
+                                type="text"
+                                className="w-full mt-1 border-gray-300 rounded-md font-bold"
+                                value={editData.nominal}
+                                onChange={e => setEditData('nominal', formatCurrencyInput(e.target.value))}
+                                required
+                            />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700">Keterangan</label>
@@ -304,7 +337,7 @@ export default function AdminSppIndex({ auth, transactions, pending, students, f
                         </div>
                         <div className="flex justify-end gap-2 mt-6">
                             <button type="button" onClick={() => setEditingTrx(null)} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md font-medium hover:bg-gray-300">Batal</button>
-                            <button type="submit" disabled={procEdit} className="px-4 py-2 bg-blue-600 text-white rounded-md font-bold hover:bg-blue-700">{procEdit ? 'Menyimpan...' : 'Simpan Perubahan'}</button>
+                            <button type="submit" disabled={procEdit} className="px-4 py-2 bg-orange-600 text-white rounded-md font-bold hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed">{procEdit ? 'Menyimpan...' : 'Simpan Perubahan'}</button>
                         </div>
                     </form>
                 </div>

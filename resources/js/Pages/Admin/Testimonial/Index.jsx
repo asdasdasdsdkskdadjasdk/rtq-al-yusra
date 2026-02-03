@@ -3,7 +3,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import PrimaryButton from '@/Components/PrimaryButton';
 
 export default function Index({ auth, testimonials, flash = {} }) {
-    
+
     const handleDelete = (id) => {
         if (confirm('Apakah Anda yakin ingin menghapus testimoni ini?')) {
             router.delete(route('admin.testimonial.destroy', id));
@@ -19,9 +19,9 @@ export default function Index({ auth, testimonials, flash = {} }) {
 
             <div className="py-12">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                    
+
                     {flash.success && (
-                        <div className="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded relative">
+                        <div className="mb-4 p-4 bg-orange-100 border border-orange-400 text-orange-700 rounded relative">
                             {flash.success}
                         </div>
                     )}
@@ -62,9 +62,9 @@ export default function Index({ auth, testimonials, flash = {} }) {
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 {item.avatar ? (
-                                                    <img 
-                                                        src={item.avatar.startsWith('http') ? item.avatar : `/storage/${item.avatar}`} 
-                                                        alt={item.name} 
+                                                    <img
+                                                        src={item.avatar.startsWith('http') ? item.avatar : `/storage/${item.avatar}`}
+                                                        alt={item.name}
                                                         className="h-10 w-10 rounded-full object-cover"
                                                     />
                                                 ) : (
@@ -72,13 +72,13 @@ export default function Index({ auth, testimonials, flash = {} }) {
                                                 )}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
-                                                <Link 
+                                                <Link
                                                     href={route('admin.testimonial.edit', item.id)}
-                                                    className="text-indigo-600 hover:text-indigo-900 bg-indigo-50 px-3 py-1 rounded-md"
+                                                    className="text-orange-600 hover:text-orange-900 bg-orange-50 px-3 py-1 rounded-md"
                                                 >
                                                     Edit
                                                 </Link>
-                                                <button 
+                                                <button
                                                     onClick={() => handleDelete(item.id)}
                                                     className="text-red-600 hover:text-red-900 bg-red-50 px-3 py-1 rounded-md ml-2"
                                                 >

@@ -7,12 +7,13 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Cabang; // <--- Import Model Cabang
+use App\Models\Program; // <--- Import Model Program (FIX ERROR 500)
 class PsbController extends Controller
 {
     public function index(Request $request)
     {
         // 1. Mulai Query
-        $query = Pendaftar::with(['user', 'program'])->latest();
+        $query = Pendaftar::with(['user', 'program'])->orderBy('id', 'desc');
 
         // 2. Logika Filter Status
         if ($request->has('status') && $request->status !== 'Semua') {
@@ -101,6 +102,9 @@ class PsbController extends Controller
             'pas_foto' => 'nullable|file|mimes:jpg,jpeg,png|max:2048',
             'skbb' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
             'sks' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
+            
+            // Konfigurasi SPP (New)
+            'tanggal_mulai_spp' => 'nullable|date',
         ];
 
         $validatedData = $request->validate($rules);

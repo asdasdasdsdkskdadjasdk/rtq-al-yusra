@@ -8,25 +8,34 @@ import SecondaryButton from '@/Components/SecondaryButton';
 import Checkbox from '@/Components/Checkbox';
 
 export default function Edit({ auth, program }) {
-    const { data, setData, put, processing, errors } = useForm({
+    // Helper Format Awal
+    const formatInitial = (num) => num ? num.toString().replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ".") : '';
+
+    const { data, setData, put, processing, errors, transform } = useForm({
         jenis: program.jenis,
         nama: program.nama,
         batas_pendaftaran: program.batas_pendaftaran,
         tes: program.tes,
         biaya: program.biaya,
-        
+
         // --- DATA BARU (Load dari DB) ---
-        nominal_uang_masuk: program.nominal_uang_masuk || '',
-        nominal_spp: program.nominal_spp || '',
+        nominal_uang_masuk: formatInitial(program.nominal_uang_masuk),
+        nominal_spp: formatInitial(program.nominal_spp),
         // --------------------------------
 
         color: program.color,
         featured: Boolean(program.featured),
-        details: program.details || [''], 
+        details: program.details || [''],
     });
 
     const handleChange = (e) => {
         const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+        setData(e.target.name, value);
+    };
+
+    const handleCurrencyChange = (e) => {
+        let value = e.target.value.replace(/\D/g, ''); // Hapus non-digit
+        value = value.replace(/\B(?=(\d{3})+(?!\d))/g, "."); // Tambah titik
         setData(e.target.name, value);
     };
 
@@ -41,21 +50,26 @@ export default function Edit({ auth, program }) {
 
     const submit = (e) => {
         e.preventDefault();
+        transform((data) => ({
+            ...data,
+            nominal_uang_masuk: data.nominal_uang_masuk.toString().replace(/\./g, ''),
+            nominal_spp: data.nominal_spp.toString().replace(/\./g, ''),
+        }));
         put(route('admin.program.update', program.id));
     };
 
     return (
-        <AuthenticatedLayout 
-        auth={auth}
-        header={<h2 className="font-semibold text-xl text-gray-800">Edit Program</h2>}>
+        <AuthenticatedLayout
+            auth={auth}
+            header={<h2 className="font-semibold text-xl text-gray-800">Edit Program</h2>}>
             <Head title="Edit Program" />
 
             <div className="py-12">
                 <div className="max-w-4xl mx-auto sm:px-6 lg:px-8">
                     <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
-                        
+
                         <form onSubmit={submit} className="space-y-6">
-                            
+
                             {/* Baris 1 */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
@@ -90,12 +104,12 @@ export default function Edit({ auth, program }) {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
                                         <InputLabel htmlFor="nominal_uang_masuk" value="Nominal Uang Masuk (Rp)" />
-                                        <TextInput type="number" id="nominal_uang_masuk" name="nominal_uang_masuk" value={data.nominal_uang_masuk} onChange={handleChange} className="mt-1 block w-full" required />
+                                        <TextInput type="text" id="nominal_uang_masuk" name="nominal_uang_masuk" value={data.nominal_uang_masuk} onChange={handleCurrencyChange} className="mt-1 block w-full" required />
                                         <InputError message={errors.nominal_uang_masuk} className="mt-2" />
                                     </div>
                                     <div>
                                         <InputLabel htmlFor="nominal_spp" value="Nominal SPP Bulanan (Rp)" />
-                                        <TextInput type="number" id="nominal_spp" name="nominal_spp" value={data.nominal_spp} onChange={handleChange} className="mt-1 block w-full" required />
+                                        <TextInput type="text" id="nominal_spp" name="nominal_spp" value={data.nominal_spp} onChange={handleCurrencyChange} className="mt-1 block w-full" required />
                                         <InputError message={errors.nominal_spp} className="mt-2" />
                                     </div>
                                 </div>

@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use App\Notifications\GeneralNotification;
 
 class AdminSppController extends Controller
 {
@@ -43,6 +44,12 @@ class AdminSppController extends Controller
             $query->where('bulan', $filterBulan);
         }
 
+        // Logika Filter Tahun
+        $filterTahun = $request->input('tahun');
+        if ($filterTahun) {
+            $query->where('tahun', $filterTahun);
+        }
+
         // Urutkan & Paginate (10 data per halaman)
         $transactions = $query->orderBy('tahun', 'desc')
             ->orderBy('bulan', 'desc')
@@ -62,7 +69,7 @@ class AdminSppController extends Controller
             'students' => $students,
             
             // --- PENTING: Kirim ini agar tidak error di frontend ---
-            'filters' => $request->only(['search', 'bulan']), 
+            'filters' => $request->only(['search', 'bulan', 'tahun']), 
         ]);
     }
 
@@ -87,6 +94,16 @@ class AdminSppController extends Controller
             'pencatat_id' => ($request->status == 'approved') ? Auth::id() : $trx->pencatat_id,
         ]);
 
+        if ($request->status !== 'pending') {
+        $msg = $request->status == 'approved' 
+            ? "Pembayaran SPP Bulan ini Diterima." 
+            : "Pembayaran SPP Ditolak. Mohon cek bukti transfer.";
+            
+        $type = $request->status == 'approved' ? 'success' : 'error';
+
+        $trx->user->notify(new GeneralNotification($msg, route('wali.spp.index'), $type));
+    }
+
         return back()->with('success', 'Data SPP berhasil diperbarui.');
     }
 
@@ -101,6 +118,16 @@ class AdminSppController extends Controller
             'pencatat_id' => Auth::id(),
             'keterangan' => $trx->keterangan . ' [ACC Admin]'
         ]);
+        
+        // Notify User
+        if($trx->user) {
+             $trx->user->notify(new GeneralNotification(
+                "Pembayaran SPP Bulan {$trx->bulan} Diterima.",
+                route('wali.spp.index'),
+                'success'
+            ));
+        }
+
         return back()->with('success', 'Pembayaran diterima.');
     }
 
@@ -109,17 +136,34 @@ class AdminSppController extends Controller
      */
     public function reject($id)
     {
-        $trx = SppTransaction::findOrFail($id);
+        $trx = SppTransaction::with('user')->findOrFail($id);
+        $user = $trx->user; // Simpan referensi user sebelum delete
         
-        // Hapus file fisik jika ada
+        // Notify User BEFORE deleting (or change logic to update status 'rejected')
+        // Disini kita ubah status jadi 'rejected' agar history tidak hilang
+        // Atau jika policy-nya delete, kirim notif dulu.
+        // Opsi User: "jika status sudah di ubah maka di wali santri akan ada notif"
+        
+        // Kita ubah jadi UPDATE status rejected, BUKAN DELETE, agar history ada.
         if ($trx->bukti_bayar) {
             Storage::disk('public')->delete($trx->bukti_bayar);
         }
 
-        // Hapus data dari database (atau ubah status jadi rejected jika mau soft delete)
-        $trx->delete(); 
+        $trx->update([
+            'status' => 'rejected',
+            'bukti_bayar' => null, // Hapus referensi file
+            'keterangan' => $trx->keterangan . ' [Ditolak Admin]'
+        ]);
+
+        if($user) {
+             $user->notify(new GeneralNotification(
+                "Pembayaran SPP Bulan {$trx->bulan} Ditolak. Silakan upload ulang.",
+                route('wali.spp.index'),
+                'error'
+            ));
+        }
         
-        return back()->with('success', 'Pembayaran ditolak/dihapus.');
+        return back()->with('success', 'Pembayaran ditolak.');
     }
 
     /**

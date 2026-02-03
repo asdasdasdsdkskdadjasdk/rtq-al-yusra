@@ -5,46 +5,74 @@ import PrimaryButton from '@/Components/PrimaryButton';
 
 export default function Pembayaran({ auth, pendaftar, clientKey, qrCode }) {
 
-    // Load Midtrans Snap Script
+    // Load Midtrans Snap Script & Embed (Fresh Load Strategy - Strict Cleanup)
     useEffect(() => {
-        // Cek jika script sudah ada agar tidak double load
-        if (document.getElementById('midtrans-script')) return;
+        const scriptId = 'midtrans-script';
 
+        // 1. Fungsi Cleanup: Hapus Script & Global Object
+        const cleanupSnap = () => {
+            const existingScript = document.getElementById(scriptId);
+            if (existingScript) existingScript.remove();
+
+            // Hapus global object snap agar tidak ada state 'stale'
+            if (window.snap) {
+                try { delete window.snap; } catch (e) { window.snap = undefined; }
+            }
+        };
+
+        // Bersihkan state lama sebelum memulai (Penting untuk SPA Navigation)
+        cleanupSnap();
+
+        // 2. Buat Script Baru
         const script = document.createElement('script');
-        script.src = "https://app.sandbox.midtrans.com/snap/snap.js"; 
-        script.id = 'midtrans-script';
+        script.src = "https://app.sandbox.midtrans.com/snap/snap.js";
+        script.id = scriptId;
         script.setAttribute('data-client-key', clientKey);
+
+        // 3. Fungsi Embed
+        const embedSnap = () => {
+            // Pastikan snap sudah load & token ada
+            if (window.snap && pendaftar.snap_token) {
+                const snapContainer = document.getElementById('snap-container');
+                if (snapContainer) {
+                    snapContainer.innerHTML = ""; // Clear content
+                    try {
+                        window.snap.embed(pendaftar.snap_token, {
+                            embedId: 'snap-container',
+                            onSuccess: function (result) {
+                                alert("Pembayaran Berhasil!");
+                                window.location.reload();
+                            },
+                            onPending: function (result) {
+                                alert("Menunggu Pembayaran...");
+                                window.location.reload();
+                            },
+                            onError: function (result) {
+                                console.error("Snap Error:", result);
+                                alert("Pembayaran Gagal!");
+                            },
+                            onClose: function () { }
+                        });
+                    } catch (error) {
+                        console.error("Snap Embed Error:", error);
+                    }
+                }
+            }
+        };
+
+        // 4. Trigger saat Load
+        script.onload = () => {
+            embedSnap();
+        };
+
         document.body.appendChild(script);
 
+        // 5. Cleanup saat Unmount
         return () => {
-            // Cleanup jika komponen di-unmount (opsional)
-            const scriptTag = document.getElementById('midtrans-script');
-            if (scriptTag) document.body.removeChild(scriptTag);
+            cleanupSnap();
         };
-    }, [clientKey]);
 
-    const handlePayment = () => {
-        if (window.snap) {
-            window.snap.pay(pendaftar.snap_token, {
-                onSuccess: function(result){
-                    alert("Pembayaran Berhasil!");
-                    window.location.reload();
-                },
-                onPending: function(result){
-                    alert("Menunggu Pembayaran...");
-                    window.location.reload();
-                },
-                onError: function(result){
-                    alert("Pembayaran Gagal!");
-                },
-                onClose: function(){
-                    alert('Anda menutup popup tanpa menyelesaikan pembayaran');
-                }
-            });
-        } else {
-            alert("Sistem pembayaran belum siap. Silakan refresh halaman.");
-        }
-    };
+    }, [clientKey, pendaftar.snap_token]);
 
     const formatRupiah = (angka) => {
         return new Intl.NumberFormat('id-ID', {
@@ -59,13 +87,13 @@ export default function Pembayaran({ auth, pendaftar, clientKey, qrCode }) {
             <Head title="Pembayaran Formulir" />
 
             {/* Hero Section (Mirip Formulir) */}
-            <div 
-                className="relative bg-gray-800 pb-20 mt-[-80px] overflow-hidden" 
-                style={{ 
-                    backgroundImage: "url('/images/rtq.jpg')", 
-                    backgroundSize: 'cover', 
-                    backgroundAttachment: 'fixed', 
-                    backgroundPosition: 'center' 
+            <div
+                className="relative bg-gray-800 pb-20 mt-[-80px] overflow-hidden"
+                style={{
+                    backgroundImage: "url('/images/rtq.jpg')",
+                    backgroundSize: 'cover',
+                    backgroundAttachment: 'fixed',
+                    backgroundPosition: 'center'
                 }}
             >
                 <div className="absolute inset-0 bg-black/70"></div>
@@ -79,11 +107,11 @@ export default function Pembayaran({ auth, pendaftar, clientKey, qrCode }) {
             {/* Konten Pembayaran */}
             <div className="relative container mx-auto px-4 sm:px-6 lg:px-8 -mt-16 z-20 pb-20">
                 <div className="max-w-4xl mx-auto bg-white p-8 md:p-12 rounded-2xl shadow-lg">
-                    
+
                     <div className="text-center mb-8 border-b pb-6">
                         <p className="font-semibold text-alyusra-orange">Nomor Pendaftaran</p>
                         <h2 className="text-3xl font-bold text-alyusra-dark-blue">{pendaftar.no_pendaftaran}</h2>
-                        
+
                         <div className="mt-4 flex justify-center">
                             {/* Menampilkan Status Pembayaran */}
                             {pendaftar.status_pembayaran === 'Lunas' ? (
@@ -98,65 +126,61 @@ export default function Pembayaran({ auth, pendaftar, clientKey, qrCode }) {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+                    {/* Layout Baru: Vertical Stack & Centered */}
+                    <div className="max-w-2xl mx-auto flex flex-col gap-8">
+
                         {/* Detail Pendaftar */}
-                        <div className="space-y-4 bg-gray-50 p-6 rounded-xl border border-gray-100">
-                            <h3 className="font-bold text-gray-800 text-lg border-b pb-2 mb-4">Detail Calon Santri</h3>
-                            <div>
-                                <label className="block text-xs font-medium text-gray-500 uppercase">Nama Lengkap</label>
-                                <p className="text-base font-semibold text-gray-900">{pendaftar.nama}</p>
+                        <div className="space-y-4 bg-gray-50 p-8 rounded-xl border border-gray-100 shadow-sm">
+                            <h3 className="font-bold text-gray-800 text-xl border-b pb-4 mb-4 text-center">Detail Calon Santri</h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-center sm:text-left">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Nama Lengkap</label>
+                                    <p className="text-lg font-semibold text-gray-900">{pendaftar.nama}</p>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Program Pilihan</label>
+                                    <p className="text-lg font-semibold text-gray-900">{pendaftar.program_nama}</p>
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-xs font-medium text-gray-500 uppercase">Program Pilihan</label>
-                                <p className="text-base font-semibold text-gray-900">{pendaftar.program_nama}</p>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-gray-500 uppercase">Total Tagihan</label>
-                                <p className="text-2xl font-bold text-alyusra-orange">
+                            <div className="pt-4 border-t mt-4 text-center">
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Total Tagihan</label>
+                                <p className="text-4xl font-extrabold text-alyusra-orange">
                                     {formatRupiah(pendaftar.nominal_pembayaran)}
                                 </p>
                             </div>
                         </div>
 
                         {/* Bagian Pembayaran / QR Code */}
-                        <div className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed border-gray-200">
+                        <div className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed border-gray-300 bg-white">
                             {pendaftar.status_pembayaran === 'Lunas' ? (
-                                <div className="text-center w-full">
-                                    <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
-                                        <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <div className="text-center w-full py-8">
+                                    <div className="w-24 h-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce">
+                                        <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                         </svg>
                                     </div>
-                                    <h3 className="text-lg font-bold text-green-700">Pembayaran Berhasil!</h3>
-                                    <p className="text-gray-600 mt-2 text-sm">Pendaftaran Anda sedang diproses oleh admin.</p>
-                                    
+                                    <h3 className="text-2xl font-bold text-green-700 mb-2">Pembayaran Berhasil!</h3>
+                                    <p className="text-gray-600 text-base">Terima kasih, pendaftaran Anda sedang diproses oleh admin.</p>
                                 </div>
                             ) : (
                                 <div className="text-center w-full">
-                                    <h3 className="text-lg font-bold text-gray-800 mb-2">QR Code Pendaftaran</h3>
-                                    <p className="text-xs text-gray-500 mb-6">Scan untuk menyimpan ID pendaftaran (Bukan QRIS)</p>
-                                    
-                                    {/* Menampilkan QR Code ID Pendaftaran dari Controller */}
-                                    {qrCode && (
-                                        <div className="mb-6 flex justify-center bg-white p-2 rounded-lg shadow-sm border inline-block">
-                                            <div dangerouslySetInnerHTML={{ __html: qrCode }} />
-                                        </div>
-                                    )}
 
-                                    <div className="border-t border-gray-200 w-full my-4"></div>
 
-                                    <p className="text-sm text-gray-600 mb-4 font-medium">
-                                        Untuk menyelesaikan pendaftaran, silakan bayar melalui tombol di bawah:
+                                    <div className="border-t border-gray-200 w-full my-6 relative">
+                                        <span className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white px-4 text-gray-400 text-sm font-medium">
+                                            Pembayaran
+                                        </span>
+                                    </div>
+
+                                    <p className="text-base text-gray-700 mb-6 font-medium">
+                                        Silakan selesaikan pembayaran di bawah ini:
                                     </p>
 
-                                    <PrimaryButton 
-                                        onClick={handlePayment} 
-                                        className="w-full justify-center py-3 text-lg bg-alyusra-orange hover:bg-orange-600 shadow-md transition transform hover:-translate-y-1"
-                                    >
-                                        Bayar Sekarang (QRIS/Transfer)
-                                    </PrimaryButton>
-                                    
-                                    <p className="text-[10px] text-gray-400 mt-3">
+                                    {/* KONTAINER UNTUK SNAP EMBED */}
+                                    <div id="snap-container" className="w-full min-h-[500px] border rounded-lg overflow-hidden shadow-sm"></div>
+
+                                    <p className="text-[10px] text-gray-400 mt-4 flex items-center justify-center gap-1">
+                                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
                                         Pembayaran aman & verifikasi otomatis didukung oleh Midtrans
                                     </p>
                                 </div>
@@ -177,33 +201,3 @@ export default function Pembayaran({ auth, pendaftar, clientKey, qrCode }) {
         </AppLayout>
     );
 }
-
-// ... import dan kode lainnya ...
-
-const handlePayment = () => {
-    if (window.snap) {
-        window.snap.pay(pendaftar.snap_token, {
-            onSuccess: function(result){
-                alert("Pembayaran Berhasil! Mengalihkan...");
-                // Reload halaman. 
-                // Karena di controller sudah kita pasang redirect, 
-                // reload ini akan otomatis membawa user ke halaman 'status.cek'
-                window.location.reload(); 
-            },
-            onPending: function(result){
-                alert("Menunggu Pembayaran...");
-                window.location.reload();
-            },
-            onError: function(result){
-                alert("Pembayaran Gagal!");
-            },
-            onClose: function(){
-                // Opsional
-            }
-        });
-    } else {
-        alert("Sistem belum siap. Refresh halaman.");
-    }
-};
-
-// ... return JSX ...

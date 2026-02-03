@@ -20,6 +20,15 @@ class AuthenticatedSessionController extends Controller
      */
     public function create(): Response
     {
+        // Simpan URL sebelumnya ke session 'url.intended' jika belum ada
+        // Ini berguna jika user klik tombol "Login" manual, bukan redirection middleware
+        if (!session()->has('url.intended')) {
+            $prev = url()->previous();
+            if ($prev !== route('login') && $prev !== url()->current()) {
+                session(['url.intended' => $prev]);
+            }
+        }
+
         return Inertia::render('Auth/Login', [
             'canResetPassword' => Route::has('password.request'),
             'status' => session('status'),
@@ -43,14 +52,13 @@ class AuthenticatedSessionController extends Controller
         $guestRoles = ['calon_santri'];
 
         if (in_array($user->role, $guestRoles)) {
-            // Jika peran pengguna ada di dalam daftar $guestRoles, arahkan ke Beranda.
-            return redirect()->route('home');
+            // Jika peran pengguna ada di dalam daftar $guestRoles, arahkan ke Beranda (intended dulu)
+            return redirect()->intended(route('home'));
         }
 
         // Untuk semua peran lainnya (psb, keuangan, admin, dll.),
-        // arahkan ke Dashboard. Menggunakan redirect()->intended() adalah
-        // praktik yang baik untuk admin.
-        return redirect()->intended(route('dashboard'));
+        // Langsung arahkan ke Dashboard (abaikan halaman sebelumnya/intended)
+        return redirect()->route('dashboard');
     }
 
     /**

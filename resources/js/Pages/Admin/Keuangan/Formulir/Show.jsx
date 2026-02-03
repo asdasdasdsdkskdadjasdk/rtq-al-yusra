@@ -3,7 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, useForm } from '@inertiajs/react'; // Tambah useForm
 
 export default function KeuanganFormulirShow({ auth, pendaftar }) {
-    
+
     // --- SETUP FORM UNTUK EDIT ---
     const { data, setData, put, processing, errors } = useForm({
         status_pembayaran: pendaftar.status_pembayaran || 'Belum Bayar',
@@ -28,7 +28,7 @@ export default function KeuanganFormulirShow({ auth, pendaftar }) {
             <div className="py-12">
                 <div className="max-w-3xl mx-auto sm:px-6 lg:px-8">
                     <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
-                        
+
                         <div className="flex justify-between items-center mb-6 border-b pb-4">
                             <h3 className="text-lg font-bold">Informasi Pendaftar</h3>
                             <Link href={route('admin.keuangan.formulir.index')} className="text-sm text-gray-500 hover:text-gray-700">
@@ -49,18 +49,18 @@ export default function KeuanganFormulirShow({ auth, pendaftar }) {
                                 <label className="block text-xs font-bold text-gray-500 uppercase">Program</label>
                                 <p className="text-gray-900 font-medium">{pendaftar.program?.nama}</p>
                             </div>
-                            
+
                             {/* --- BAGIAN EDIT STATUS --- */}
                             <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">
                                     Update Status Pembayaran
                                 </label>
-                                
+
                                 <form onSubmit={handleSubmit} className="flex gap-2">
                                     <select
                                         value={data.status_pembayaran}
                                         onChange={(e) => setData('status_pembayaran', e.target.value)}
-                                        className="text-sm border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm w-full"
+                                        className="text-sm border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-md shadow-sm w-full"
                                     >
                                         <option value="Belum Bayar">Belum Bayar</option>
                                         <option value="Lunas">Lunas</option>
@@ -70,13 +70,13 @@ export default function KeuanganFormulirShow({ auth, pendaftar }) {
                                     <button
                                         type="submit"
                                         disabled={processing}
-                                        className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-50"
+                                        className="px-4 py-2 bg-orange-600 text-white rounded-md text-sm font-semibold hover:bg-orange-700 transition disabled:opacity-50"
                                     >
                                         {processing ? 'Simpan...' : 'Simpan'}
                                     </button>
                                 </form>
                                 {errors.status_pembayaran && <div className="text-red-500 text-xs mt-1">{errors.status_pembayaran}</div>}
-                                
+
                                 <div className="mt-2 text-xs text-gray-500">
                                     Status saat ini: <span className="font-bold">{pendaftar.status_pembayaran}</span>
                                 </div>
@@ -88,17 +88,17 @@ export default function KeuanganFormulirShow({ auth, pendaftar }) {
                             <h4 className="font-bold text-gray-800 mb-4">Bukti Pembayaran (Manual)</h4>
                             {pendaftar.bukti_bayar ? (
                                 <div className="border rounded-lg p-2 inline-block">
-                                    <img 
-                                        src={`/storage/${pendaftar.bukti_bayar}`} 
-                                        alt="Bukti Bayar" 
+                                    <img
+                                        src={`/storage/${pendaftar.bukti_bayar}`}
+                                        alt="Bukti Bayar"
                                         className="max-h-64 rounded"
                                     />
                                     <div className="mt-2 text-center">
-                                        <a 
-                                            href={`/storage/${pendaftar.bukti_bayar}`} 
-                                            target="_blank" 
+                                        <a
+                                            href={`/storage/${pendaftar.bukti_bayar}`}
+                                            target="_blank"
                                             rel="noopener noreferrer"
-                                            className="text-blue-600 text-sm hover:underline"
+                                            className="text-orange-600 text-sm hover:underline"
                                         >
                                             Lihat Ukuran Penuh
                                         </a>

@@ -35,4 +35,17 @@ return [
         ],
     ],
 
+    'midtrans' => [
+        'server_key' => env('MIDTRANS_SERVER_KEY'),
+        'client_key' => env('MIDTRANS_CLIENT_KEY'),
+        'is_production' => env('MIDTRANS_IS_PRODUCTION', false),
+        'is_sanitized' => env('MIDTRANS_IS_SANITIZED', true),
+        'is_3ds' => env('MIDTRANS_IS_3DS', true),
+    ],
+
+    'santri_api' => [
+        'base_url' => env('SANTRI_API_BASE_URL', 'http://127.0.0.1:8080/api/v1/santri'),
+        'api_key' => env('SANTRI_API_KEY', 'RTQALYUSRA-RAHASIA-2025-YANG-SULIT-DITEBAK'),
+    ],
+
 ];

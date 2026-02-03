@@ -113,9 +113,7 @@ const YouTubeFeed = () => {
                             </div>
 
                             {/* Tombol Tiga Titik (Menu) */}
-                            <div className="video-menu-icon">
-                                &#8942; 
-                            </div>
+                            
                         </motion.div>
                     ))}
                 </motion.div>

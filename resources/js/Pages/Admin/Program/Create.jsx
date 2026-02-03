@@ -8,13 +8,13 @@ import SecondaryButton from '@/Components/SecondaryButton';
 import Checkbox from '@/Components/Checkbox';
 
 export default function Create({ auth }) {
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors, transform } = useForm({
         jenis: '',
         nama: '',
         batas_pendaftaran: '',
         tes: '',
         biaya: '', // Ini untuk Teks Tampilan di Kartu (misal: "Gratis" atau "300rb")
-        
+
         // --- DATA BARU (WAJIB ADA) ---
         nominal_uang_masuk: '', // Untuk Logika Pembayaran
         nominal_spp: '',        // Untuk Logika Pembayaran
@@ -27,6 +27,12 @@ export default function Create({ auth }) {
 
     const handleChange = (e) => {
         const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+        setData(e.target.name, value);
+    };
+
+    const handleCurrencyChange = (e) => {
+        let value = e.target.value.replace(/\D/g, ''); // Hapus non-digit
+        value = value.replace(/\B(?=(\d{3})+(?!\d))/g, "."); // Tambah titik
         setData(e.target.name, value);
     };
 
@@ -47,21 +53,26 @@ export default function Create({ auth }) {
 
     const submit = (e) => {
         e.preventDefault();
+        transform((data) => ({
+            ...data,
+            nominal_uang_masuk: data.nominal_uang_masuk.toString().replace(/\./g, ''),
+            nominal_spp: data.nominal_spp.toString().replace(/\./g, ''),
+        }));
         post(route('admin.program.store'));
     };
 
     return (
-        <AuthenticatedLayout 
-        auth={auth}
-        header={<h2 className="font-semibold text-xl text-gray-800">Tambah Program Baru</h2>}>
+        <AuthenticatedLayout
+            auth={auth}
+            header={<h2 className="font-semibold text-xl text-gray-800">Tambah Program Baru</h2>}>
             <Head title="Tambah Program" />
 
             <div className="py-12">
                 <div className="max-w-4xl mx-auto sm:px-6 lg:px-8">
                     <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
-                        
+
                         <form onSubmit={submit} className="space-y-6">
-                            
+
                             {/* Baris 1: Info Dasar */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
@@ -96,29 +107,29 @@ export default function Create({ auth }) {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
                                         <InputLabel htmlFor="nominal_uang_masuk" value="Nominal Uang Masuk (Rp)" />
-                                        <TextInput 
-                                            type="number" 
-                                            id="nominal_uang_masuk" 
-                                            name="nominal_uang_masuk" 
-                                            value={data.nominal_uang_masuk} 
-                                            onChange={handleChange} 
-                                            className="mt-1 block w-full border-blue-300 focus:border-blue-500 focus:ring-blue-500" 
-                                            placeholder="5000000" 
-                                            required 
+                                        <TextInput
+                                            type="text"
+                                            id="nominal_uang_masuk"
+                                            name="nominal_uang_masuk"
+                                            value={data.nominal_uang_masuk}
+                                            onChange={handleCurrencyChange}
+                                            className="mt-1 block w-full border-blue-300 focus:border-blue-500 focus:ring-blue-500"
+                                            placeholder="5.000.000"
+                                            required
                                         />
                                         <InputError message={errors.nominal_uang_masuk} className="mt-2" />
                                     </div>
                                     <div>
                                         <InputLabel htmlFor="nominal_spp" value="Nominal SPP Bulanan (Rp)" />
-                                        <TextInput 
-                                            type="number" 
-                                            id="nominal_spp" 
-                                            name="nominal_spp" 
-                                            value={data.nominal_spp} 
-                                            onChange={handleChange} 
-                                            className="mt-1 block w-full border-blue-300 focus:border-blue-500 focus:ring-blue-500" 
-                                            placeholder="300000" 
-                                            required 
+                                        <TextInput
+                                            type="text"
+                                            id="nominal_spp"
+                                            name="nominal_spp"
+                                            value={data.nominal_spp}
+                                            onChange={handleCurrencyChange}
+                                            className="mt-1 block w-full border-blue-300 focus:border-blue-500 focus:ring-blue-500"
+                                            placeholder="300.000"
+                                            required
                                         />
                                         <InputError message={errors.nominal_spp} className="mt-2" />
                                     </div>
@@ -156,17 +167,17 @@ export default function Create({ auth }) {
                                 <InputLabel value="Detail Persyaratan / Ketentuan" className="mb-2" />
                                 {data.details.map((detail, index) => (
                                     <div key={index} className="flex gap-2 mb-2">
-                                        <TextInput 
-                                            value={detail} 
-                                            onChange={(e) => handleDetailChange(index, e.target.value)} 
-                                            className="block w-full" 
+                                        <TextInput
+                                            value={detail}
+                                            onChange={(e) => handleDetailChange(index, e.target.value)}
+                                            className="block w-full"
                                             placeholder={`Poin persyaratan ke-${index + 1}`}
-                                            required 
+                                            required
                                         />
                                         {data.details.length > 1 && (
-                                            <button 
-                                                type="button" 
-                                                onClick={() => removeDetail(index)} 
+                                            <button
+                                                type="button"
+                                                onClick={() => removeDetail(index)}
                                                 className="bg-red-100 text-red-600 px-3 rounded hover:bg-red-200 transition"
                                                 title="Hapus poin ini"
                                             >
@@ -175,7 +186,7 @@ export default function Create({ auth }) {
                                         )}
                                     </div>
                                 ))}
-                                
+
                                 <button type="button" onClick={addDetail} className="mt-2 text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                                         <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />

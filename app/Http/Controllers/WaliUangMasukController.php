@@ -159,6 +159,17 @@ class WaliUangMasukController extends Controller
             'status'        => 'pending' 
         ]);
 
+        // NOTIFIKASI KE ADMIN KEUANGAN
+        $adminKeuangan = \App\Models\User::where('role', 'keuangan')->get();
+        $user = Auth::user();
+        foreach ($adminKeuangan as $admin) {
+            $admin->notify(new \App\Notifications\GeneralNotification(
+                "Pembayaran Uang Masuk Baru: {$user->name}",
+                route('admin.uang_masuk.index'), // Link ke halaman verifikasi Uang Masuk
+                'warning'
+            ));
+        }
+
         return back()->with('success', 'Bukti pembayaran berhasil diupload. Menunggu verifikasi admin.');
     }
 }

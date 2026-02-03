@@ -38,9 +38,9 @@ class WaliSppController extends Controller
         if ($pendaftar && $pendaftar->tanggal_mulai_spp) {
             $tglMulai = Carbon::parse($pendaftar->tanggal_mulai_spp);
         } else {
-            // Fallback Default: 1 September tahun dia mendaftar
+            // Fallback Default: 1 Agustus tahun dia mendaftar
             $tahunDaftar = $pendaftar ? $pendaftar->created_at->year : Carbon::now()->year;
-            $tglMulai = Carbon::create($tahunDaftar, 9, 1);
+            $tglMulai = Carbon::create($tahunDaftar, 8, 1);
         }
 
         // 2. SETUP RANGE TANGGAL
@@ -223,6 +223,18 @@ class WaliSppController extends Controller
             'bukti_bayar' => $path,
             'keterangan' => $request->keterangan,
         ]);
+
+        // NOTIFIKASI KE ADMIN KEUANGAN
+        // Cari user dengan role 'keuangan'
+        $adminKeuangan = \App\Models\User::where('role', 'keuangan')->get();
+        $user = Auth::user();
+        foreach ($adminKeuangan as $admin) {
+            $admin->notify(new \App\Notifications\GeneralNotification(
+                "Pembayaran SPP Baru: {$user->name} (Bulan {$request->bulan})",
+                route('admin.spp.index'), // Link ke halaman verifikasi SPP
+                'warning' // Warning karena butuh approval
+            ));
+        }
 
         return back()->with('success', 'Bukti berhasil diupload. Tunggu verifikasi.');
     }

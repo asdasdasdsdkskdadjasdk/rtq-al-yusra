@@ -24,23 +24,23 @@ export default function KeuanganFormulirIndex({ auth, pendaftar, filters }) {
 
             <div className="py-12">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                    
+
                     {/* --- HEADER & SEARCH --- */}
                     <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                         <div>
                             <h3 className="text-lg font-bold text-gray-700">Daftar Calon Santri</h3>
                             <p className="text-sm text-gray-500">Memantau pembayaran biaya pendaftaran awal.</p>
                         </div>
-                        
+
                         <form onSubmit={handleSearch} className="flex gap-2 w-full md:w-auto">
-                            <input 
-                                type="text" 
-                                className="border-gray-300 rounded-lg text-sm w-full md:w-64" 
+                            <input
+                                type="text"
+                                className="border-gray-300 rounded-lg text-sm w-full md:w-64 focus:ring-orange-500 focus:border-orange-500"
                                 placeholder="Cari Nama / No Daftar..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                             />
-                            <button className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700">
+                            <button className="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-orange-700">
                                 Cari
                             </button>
                         </form>
@@ -73,7 +73,7 @@ export default function KeuanganFormulirIndex({ auth, pendaftar, filters }) {
                                                     <div className="text-xs text-gray-400">{item.jenis_kelamin}</div>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                                                    <span className="bg-orange-100 text-orange-800 text-xs font-medium px-2.5 py-0.5 rounded">
                                                         {item.program?.nama || '-'}
                                                     </span>
                                                 </td>
@@ -81,18 +81,17 @@ export default function KeuanganFormulirIndex({ auth, pendaftar, filters }) {
                                                     {new Date(item.created_at).toLocaleDateString('id-ID')}
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
-                                                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                                                        item.status_pembayaran === 'Lunas' 
-                                                            ? 'bg-green-100 text-green-700' 
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${item.status_pembayaran === 'Lunas'
+                                                            ? 'bg-green-100 text-green-700'
                                                             : 'bg-red-100 text-red-700'
-                                                    }`}>
+                                                        }`}>
                                                         {item.status_pembayaran}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
-                                                    <Link 
+                                                    <Link
                                                         href={route('admin.keuangan.formulir.show', item.id)}
-                                                        className="text-blue-600 hover:underline font-bold text-xs"
+                                                        className="text-orange-600 hover:underline font-bold text-xs"
                                                     >
                                                         Lihat Detail
                                                     </Link>
@@ -109,16 +108,15 @@ export default function KeuanganFormulirIndex({ auth, pendaftar, filters }) {
                                 </tbody>
                             </table>
                         </div>
-                        
+
                         {/* PAGINATION AMAN */}
                         <div className="p-4 border-t bg-gray-50 flex justify-end">
                             {listLinks.length > 0 && listLinks.map((link, k) => (
                                 <Link
                                     key={k}
                                     href={link.url || '#'}
-                                    className={`px-3 py-1 mx-1 border rounded text-xs ${
-                                        link.active ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'
-                                    } ${!link.url ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    className={`px-3 py-1 mx-1 border rounded text-xs ${link.active ? 'bg-orange-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'
+                                        } ${!link.url ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     dangerouslySetInnerHTML={{ __html: link.label }}
                                 />
                             ))}

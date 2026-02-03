@@ -3,11 +3,11 @@ import { Head, useForm, Link } from '@inertiajs/react';
 
 // 1. Terima props 'programs' dan 'cabangs'
 export default function Edit({ auth, pendaftar, programs, cabangs }) {
-    
+
     const { data, setData, post, processing, errors } = useForm({
         _method: 'PUT',
         status: pendaftar.status || '',
-        
+
         // Data Diri
         nama: pendaftar.nama || '',
         nik: pendaftar.nik || '',
@@ -17,12 +17,15 @@ export default function Edit({ auth, pendaftar, programs, cabangs }) {
         tanggal_lahir: pendaftar.tanggal_lahir || '',
         jenis_kelamin: pendaftar.jenis_kelamin || '',
         alamat: pendaftar.alamat || '',
-        
+
         // Data Orang Tua & Program
         nama_orang_tua: pendaftar.nama_orang_tua || '',
         cabang: pendaftar.cabang || '',
         program_nama: pendaftar.program_nama || '',
         program_jenis: pendaftar.program_jenis || '',
+
+        // Konfigurasi Keuangan
+        tanggal_mulai_spp: pendaftar.tanggal_mulai_spp || '',
 
         // File
         ijazah_terakhir: null,
@@ -44,7 +47,7 @@ export default function Edit({ auth, pendaftar, programs, cabangs }) {
             {currentFile && (
                 <div className="mb-3 text-xs">
                     <span className="text-gray-500">File Saat Ini: </span>
-                    <a href={`/storage/${currentFile}`} target="_blank" className="text-blue-600 hover:underline break-all">
+                    <a href={`/storage/${currentFile}`} target="_blank" className="text-orange-600 hover:underline break-all">
                         {currentFile.split('/').pop()}
                     </a>
                 </div>
@@ -69,14 +72,14 @@ export default function Edit({ auth, pendaftar, programs, cabangs }) {
                 </div>
 
                 <form onSubmit={submit} className="space-y-8">
-                    
+
                     {/* SECTION 1: STATUS UTAMA */}
-                    <div className="bg-blue-50 p-6 rounded-xl border border-blue-100">
-                        <label className="block text-lg font-bold text-blue-900 mb-2">Status Pendaftaran</label>
+                    <div className="bg-orange-50 p-6 rounded-xl border border-orange-100">
+                        <label className="block text-lg font-bold text-orange-900 mb-2">Status Pendaftaran</label>
                         <select
                             value={data.status}
                             onChange={(e) => setData('status', e.target.value)}
-                            className="w-full border-blue-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-3"
+                            className="w-full border-orange-300 rounded-lg shadow-sm focus:ring-orange-500 focus:border-orange-500 p-3"
                             required
                         >
                             <option value="Menunggu Verifikasi">Menunggu Verifikasi</option>
@@ -116,7 +119,7 @@ export default function Edit({ auth, pendaftar, programs, cabangs }) {
                                     <option value="Perempuan">Perempuan</option>
                                 </select>
                             </div>
-                             <div>
+                            <div>
                                 <label className="block text-sm font-medium text-gray-700">No HP</label>
                                 <input type="text" value={data.no_hp} onChange={(e) => setData('no_hp', e.target.value)} className="mt-1 w-full border-gray-300 rounded-lg shadow-sm" required />
                             </div>
@@ -133,9 +136,9 @@ export default function Edit({ auth, pendaftar, programs, cabangs }) {
 
                     {/* SECTION 3: PROGRAM & ORTU (BAGIAN YANG DIUBAH) */}
                     <div>
-                         <h3 className="text-lg font-bold text-gray-800 mb-4 border-l-4 border-orange-500 pl-3">Program & Orang Tua</h3>
-                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            
+                        <h3 className="text-lg font-bold text-gray-800 mb-4 border-l-4 border-orange-500 pl-3">Program & Orang Tua</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
                             {/* 2. DROPDOWN PROGRAM DARI DATABASE */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Program <span className="text-red-500">*</span></label>
@@ -186,10 +189,32 @@ export default function Edit({ auth, pendaftar, programs, cabangs }) {
                                 <label className="block text-sm font-medium text-gray-700">Nama Orang Tua</label>
                                 <input type="text" value={data.nama_orang_tua} onChange={(e) => setData('nama_orang_tua', e.target.value)} className="mt-1 w-full border-gray-300 rounded-lg shadow-sm" />
                             </div>
-                         </div>
+                        </div>
                     </div>
 
-                    {/* SECTION 4: BERKAS (Tetap sama) */}
+                    {/* SECTION 4: KONFIGURASI KEUANGAN (BARU) */}
+                    <div className="bg-orange-50 p-6 rounded-xl border border-orange-100">
+                        <h3 className="text-lg font-bold text-orange-900 mb-4">Konfigurasi Keuangan</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">
+                                    Tanggal Mulai Tagihan SPP
+                                    <span className="block text-xs text-gray-400 font-normal mt-0.5">
+                                        (Default: 1 Agustus tahun pendaftaran). Ubah jika santri masuk di tengah tahun.
+                                    </span>
+                                </label>
+                                <input
+                                    type="date"
+                                    value={data.tanggal_mulai_spp}
+                                    onChange={(e) => setData('tanggal_mulai_spp', e.target.value)}
+                                    className="mt-1 w-full border-gray-300 rounded-lg shadow-sm"
+                                />
+                                {errors.tanggal_mulai_spp && <div className="text-red-500 text-sm mt-1">{errors.tanggal_mulai_spp}</div>}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* SECTION 5: BERKAS */}
                     <div>
                         <h3 className="text-lg font-bold text-gray-800 mb-4 border-l-4 border-orange-500 pl-3">Update Berkas (Upload untuk mengganti)</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

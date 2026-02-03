@@ -3,11 +3,11 @@ import { Head, Link, usePage } from '@inertiajs/react'; // Pastikan usePage diim
 import AppLayout from '@/Layouts/AppLayout';
 
 export default function StatusPendaftaran({ auth, pendaftarList }) {
-    
+
     // 1. AMBIL DATA SETTING (SEKOLAH) DARI PROPS GLOBAL
     const { sekolah } = usePage().props;
 
-    
+
     // State untuk menangani data yang sedang dipilih (Default: data terbaru)
     const [activePendaftar, setActivePendaftar] = useState(pendaftarList?.[0] || {});
 
@@ -36,7 +36,7 @@ export default function StatusPendaftaran({ auth, pendaftarList }) {
 
     // Helper Warna Background Status
     const getStatusColorClass = (status) => {
-        switch(status) {
+        switch (status) {
             case 'Sudah Daftar Ulang': return 'bg-green-50 border-green-200';
             case 'Lulus': return 'bg-green-50 border-green-200';
             case 'Tidak Lulus': return 'bg-red-50 border-red-200';
@@ -48,7 +48,7 @@ export default function StatusPendaftaran({ auth, pendaftarList }) {
 
     // Helper Warna Text Status
     const getStatusTextClass = (status) => {
-        switch(status) {
+        switch (status) {
             case 'Sudah Daftar Ulang': return 'text-green-700';
             case 'Lulus': return 'text-green-600';
             case 'Tidak Lulus': return 'text-red-600';
@@ -61,7 +61,7 @@ export default function StatusPendaftaran({ auth, pendaftarList }) {
     // Jika data kosong
     if (!activePendaftar || !activePendaftar.no_pendaftaran) {
         return (
-             <AppLayout auth={auth}>
+            <AppLayout auth={auth}>
                 <div className="container mx-auto p-10 text-center">
                     <div className="max-w-md mx-auto bg-white p-8 rounded-xl shadow">
                         <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -74,7 +74,7 @@ export default function StatusPendaftaran({ auth, pendaftarList }) {
                         </Link>
                     </div>
                 </div>
-             </AppLayout>
+            </AppLayout>
         )
     }
 
@@ -83,13 +83,13 @@ export default function StatusPendaftaran({ auth, pendaftarList }) {
             <Head title="Status Pendaftaran" />
 
             {/* Hero Section */}
-            <div 
-                className="relative bg-gray-800 pb-24 mt-[-80px] overflow-hidden print:hidden" 
-                style={{ 
-                    backgroundImage: "url('/images/rtq.jpg')", 
-                    backgroundSize: 'cover', 
-                    backgroundAttachment: 'fixed', 
-                    backgroundPosition: 'center' 
+            <div
+                className="relative bg-gray-800 pb-24 mt-[-80px] overflow-hidden print:hidden"
+                style={{
+                    backgroundImage: "url('/images/rtq.jpg')",
+                    backgroundSize: 'cover',
+                    backgroundAttachment: 'fixed',
+                    backgroundPosition: 'center'
                 }}
             >
                 <div className="absolute inset-0 bg-black/75"></div>
@@ -104,9 +104,9 @@ export default function StatusPendaftaran({ auth, pendaftarList }) {
             </div>
 
             {/* Main Content */}
-            <div className="relative container mx-auto px-4 sm:px-6 lg:px-8 -mt-16 z-20 pb-20">
+            <div className="relative container mx-auto px-4 sm:px-6 lg:px-8 -mt-16 z-20 pb-20 print:hidden">
                 <div className="max-w-6xl mx-auto">
-                    
+
                     {/* 1. KARTU STATUS UTAMA (HEADER) */}
                     <div className="bg-white rounded-2xl shadow-xl overflow-hidden mb-8">
                         <div className="p-6 md:p-8 border-b border-gray-100">
@@ -126,10 +126,10 @@ export default function StatusPendaftaran({ auth, pendaftarList }) {
                                 </h3>
                                 <p className="text-gray-600">
                                     {activePendaftar.status === 'Sudah Daftar Ulang' ? 'Selamat! Anda resmi terdaftar sebagai santri RTQ Al-Yusra.' :
-                                     activePendaftar.status === 'Lulus' ? 'Selamat! Anda dinyatakan lulus seleksi. Segera lakukan daftar ulang.' : 
-                                     activePendaftar.status === 'Tidak Lulus' ? 'Mohon maaf, Anda belum lulus seleksi.' :
-                                     activePendaftar.status === 'Menunggu Hasil Pendaftaran' ? 'Ujian telah selesai. Mohon tunggu pengumuman kelulusan.' :
-                                     'Data Anda sedang diverifikasi oleh panitia atau menunggu jadwal ujian.'}
+                                        activePendaftar.status === 'Lulus' ? 'Selamat! Anda dinyatakan lulus seleksi. Segera lakukan daftar ulang.' :
+                                            activePendaftar.status === 'Tidak Lulus' ? 'Mohon maaf, Anda belum lulus seleksi.' :
+                                                activePendaftar.status === 'Menunggu Hasil Pendaftaran' ? 'Ujian telah selesai. Mohon tunggu pengumuman kelulusan.' :
+                                                    'Data Anda sudah diverifikasi oleh panitia atau menunggu jadwal ujian.'}
                                 </p>
 
                                 {/* Tombol Bayar Muncul Jika Belum Lunas & Bukan Status Final/Gagal */}
@@ -138,7 +138,7 @@ export default function StatusPendaftaran({ auth, pendaftarList }) {
                                         <p className="text-red-500 font-medium mb-2">
                                             Status Pembayaran: {activePendaftar.status_pembayaran}
                                         </p>
-                                        <a 
+                                        <a
                                             href={route('pembayaran.show', activePendaftar.id)}
                                             className="inline-flex items-center px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-full shadow-lg transition-transform hover:scale-105"
                                         >
@@ -151,10 +151,10 @@ export default function StatusPendaftaran({ auth, pendaftarList }) {
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        
+
                         {/* 2. KOLOM KIRI: TAMPILAN DINAMIS BERDASARKAN STATUS */}
                         <div className="lg:col-span-2 space-y-8">
-                            
+
                             {/* --- KONDISI A: SUDAH DAFTAR ULANG (FINAL) --- */}
                             {activePendaftar.status === 'Sudah Daftar Ulang' ? (
                                 <div className="bg-white rounded-2xl shadow-lg p-8 text-center border-t-4 border-green-600">
@@ -168,23 +168,30 @@ export default function StatusPendaftaran({ auth, pendaftarList }) {
                                     <h3 className="text-2xl font-bold text-gray-800 mb-3">Selamat Bergabung!</h3>
                                     <p className="text-gray-600 mb-6 max-w-lg mx-auto">
                                         Proses Daftar Ulang Anda telah berhasil dan terverifikasi sistem.
-                                        <br/>Status Akun Anda kini adalah <strong>WALI SANTRI</strong>.
+                                        <br />Status Akun Anda kini adalah <strong>WALI SANTRI</strong>.
                                     </p>
-                                    
+
+                                    <div className="mb-8">
+                                        <Link href={route('dashboard')} className="px-6 py-3 bg-orange-600 text-white font-bold rounded-full shadow hover:bg-orange-700 transition flex items-center justify-center gap-2 w-max mx-auto">
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+                                            Masuk ke Dashboard
+                                        </Link>
+                                    </div>
+
                                     {/* --- TOMBOL GABUNG GRUP WA (DINAMIS) --- */}
                                     {sekolah.link_grup_wa ? (
                                         <div className="bg-green-50 p-6 rounded-xl border border-green-200">
                                             <p className="font-bold text-green-800 mb-3 text-sm">
                                                 Silakan bergabung ke Grup WhatsApp untuk informasi kegiatan belajar mengajar:
                                             </p>
-                                            <a 
-                                                href={sekolah.link_grup_wa} 
-                                                target="_blank" 
+                                            <a
+                                                href={sekolah.link_grup_wa}
+                                                target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-full shadow-lg transition-transform hover:scale-105 text-sm"
                                             >
                                                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                                                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z" />
                                                 </svg>
                                                 Bergabung ke Grup WhatsApp
                                             </a>
@@ -196,7 +203,7 @@ export default function StatusPendaftaran({ auth, pendaftarList }) {
                                     )}
                                 </div>
 
-                            /* --- KONDISI B: LULUS (MUNCUL TOMBOL DAFTAR ULANG) --- */
+                                /* --- KONDISI B: LULUS (MUNCUL TOMBOL DAFTAR ULANG) --- */
                             ) : activePendaftar.status === 'Lulus' ? (
                                 <div className="bg-white rounded-2xl shadow-lg p-8 text-center border-t-4 border-green-500">
                                     <div className="mb-6 flex justify-center">
@@ -208,13 +215,13 @@ export default function StatusPendaftaran({ auth, pendaftarList }) {
                                     </div>
                                     <h3 className="text-2xl font-bold text-gray-800 mb-3">Alhamdulillah, Selamat!</h3>
                                     <p className="text-gray-600 mb-8 max-w-lg mx-auto leading-relaxed">
-                                        Anda telah dinyatakan <strong>LULUS</strong> seleksi masuk RTQ Al-Yusra. 
-                                        <br/>
+                                        Anda telah dinyatakan <strong>LULUS</strong> seleksi masuk RTQ Al-Yusra.
+                                        <br />
                                         Silakan lakukan Registrasi Ulang untuk mengonfirmasi dan mengamankan kuota santri Anda.
                                     </p>
-                                    
-                                    <Link 
-                                        href={route('daftar.ulang.show')} 
+
+                                    <Link
+                                        href={route('daftar.ulang.show')}
                                         className="inline-flex items-center gap-2 px-8 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-full shadow-lg transition-transform hover:scale-105"
                                     >
                                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -227,7 +234,7 @@ export default function StatusPendaftaran({ auth, pendaftarList }) {
                                     </p>
                                 </div>
 
-                            /* --- KONDISI C: TIDAK LULUS --- */
+                                /* --- KONDISI C: TIDAK LULUS --- */
                             ) : activePendaftar.status === 'Tidak Lulus' ? (
                                 <div className="bg-white rounded-2xl shadow-lg p-8 text-center border-t-4 border-red-500">
                                     <div className="mb-6 flex justify-center">
@@ -240,12 +247,12 @@ export default function StatusPendaftaran({ auth, pendaftarList }) {
                                     <h3 className="text-2xl font-bold text-gray-800 mb-3">Tetap Semangat!</h3>
                                     <p className="text-gray-600 mb-8 max-w-lg mx-auto leading-relaxed">
                                         "Kegagalan bukanlah akhir dari segalanya, melainkan kesempatan untuk mencoba lagi dengan lebih baik."
-                                        <br/><br/>
+                                        <br /><br />
                                         Jangan berkecil hati. Allah pasti punya rencana terbaik untukmu.
                                     </p>
-                                    
-                                    <Link 
-                                        href={route('pendaftaran')} 
+
+                                    <Link
+                                        href={route('pendaftaran')}
                                         className="inline-flex items-center gap-2 px-8 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-full shadow-lg transition-transform hover:scale-105"
                                     >
                                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -255,7 +262,7 @@ export default function StatusPendaftaran({ auth, pendaftarList }) {
                                     </Link>
                                 </div>
 
-                            /* --- KONDISI D: MENUNGGU HASIL (PENGUMUMAN) --- */
+                                /* --- KONDISI D: MENUNGGU HASIL (PENGUMUMAN) --- */
                             ) : activePendaftar.status === 'Menunggu Hasil Pendaftaran' ? (
                                 <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 border-l-4 border-blue-500">
                                     <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -275,11 +282,11 @@ export default function StatusPendaftaran({ auth, pendaftarList }) {
                                     </div>
                                 </div>
 
-                            /* --- KONDISI E: DEFAULT (JADWAL UJIAN) --- */
+                                /* --- KONDISI E: DEFAULT (JADWAL UJIAN) --- */
                             ) : (
                                 <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
                                     <h3 className="text-lg font-bold text-gray-800 mb-6 border-b pb-2">Jadwal Ujian Masuk</h3>
-                                    
+
                                     <div className="space-y-4">
                                         {/* Jika Lunas -> Tampilkan Jadwal */}
                                         {activePendaftar.status_pembayaran === 'Lunas' ? (
@@ -287,7 +294,7 @@ export default function StatusPendaftaran({ auth, pendaftarList }) {
                                                 <div className="absolute top-0 right-0 bg-green-600 text-white text-xs px-3 py-1 rounded-bl-lg rounded-tr-lg font-bold">
                                                     SIAP UJIAN
                                                 </div>
-                                                
+
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                     <div>
                                                         <p className="text-xs text-gray-500 uppercase font-semibold">Kegiatan</p>
@@ -314,10 +321,15 @@ export default function StatusPendaftaran({ auth, pendaftarList }) {
                                                 </div>
 
                                                 <div className="mt-6 pt-4 border-t flex justify-end">
-                                                    <button onClick={() => window.print()} className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 font-bold">
+                                                    <a
+                                                        href={route('cetak.kartu-ujian', { id: activePendaftar.id })}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 font-bold"
+                                                    >
                                                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-                                                        Cetak Kartu Ujian
-                                                    </button>
+                                                        Download Kartu Ujian (PDF)
+                                                    </a>
                                                 </div>
                                             </div>
                                         ) : (
@@ -359,7 +371,7 @@ export default function StatusPendaftaran({ auth, pendaftarList }) {
 
                         {/* 3. KOLOM KANAN: DATA DIRI & RIWAYAT */}
                         <div className="space-y-8">
-                            
+
                             {/* Card Data Diri */}
                             <div className="bg-white rounded-2xl shadow-lg p-6">
                                 <h3 className="text-lg font-bold text-gray-800 mb-4 border-b pb-2">Data Pendaftar</h3>
@@ -379,11 +391,10 @@ export default function StatusPendaftaran({ auth, pendaftarList }) {
                                     <div>
                                         <label className="text-xs text-gray-500 uppercase font-semibold">Status Pembayaran</label>
                                         <div className="mt-1">
-                                            <span className={`px-3 py-1 text-xs font-bold rounded-full ${
-                                                activePendaftar.status_pembayaran === 'Lunas' 
-                                                ? 'bg-green-100 text-green-700' 
+                                            <span className={`px-3 py-1 text-xs font-bold rounded-full ${activePendaftar.status_pembayaran === 'Lunas'
+                                                ? 'bg-green-100 text-green-700'
                                                 : 'bg-red-100 text-red-700'
-                                            }`}>
+                                                }`}>
                                                 {activePendaftar.status_pembayaran}
                                             </span>
                                         </div>
@@ -400,23 +411,21 @@ export default function StatusPendaftaran({ auth, pendaftarList }) {
                                             <button
                                                 key={item.id}
                                                 onClick={() => setActivePendaftar(item)}
-                                                className={`text-left p-3 rounded-lg border transition-all ${
-                                                    activePendaftar.id === item.id 
-                                                    ? 'bg-orange-50 border-orange-300 ring-1 ring-orange-300' 
+                                                className={`text-left p-3 rounded-lg border transition-all ${activePendaftar.id === item.id
+                                                    ? 'bg-orange-50 border-orange-300 ring-1 ring-orange-300'
                                                     : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-                                                }`}
+                                                    }`}
                                             >
                                                 <div className="flex justify-between items-center mb-1">
                                                     <span className="text-xs font-mono font-bold text-gray-500">
                                                         {item.no_pendaftaran}
                                                     </span>
-                                                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${
-                                                        item.status === 'Lulus' ? 'bg-green-100 text-green-700' :
+                                                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${item.status === 'Lulus' ? 'bg-green-100 text-green-700' :
                                                         item.status === 'Sudah Daftar Ulang' ? 'bg-green-100 text-green-700' :
-                                                        item.status === 'Tidak Lulus' ? 'bg-red-100 text-red-700' :
-                                                        item.status === 'Menunggu Hasil Pendaftaran' ? 'bg-blue-100 text-blue-700' :
-                                                        'bg-yellow-100 text-yellow-700'
-                                                    }`}>
+                                                            item.status === 'Tidak Lulus' ? 'bg-red-100 text-red-700' :
+                                                                item.status === 'Menunggu Hasil Pendaftaran' ? 'bg-blue-100 text-blue-700' :
+                                                                    'bg-yellow-100 text-yellow-700'
+                                                        }`}>
                                                         {item.status}
                                                     </span>
                                                 </div>
@@ -433,6 +442,11 @@ export default function StatusPendaftaran({ auth, pendaftarList }) {
                     </div>
                 </div>
             </div>
+            {/* --- 4. LAYOUT KHUSUS CETAK (HIDDEN ON SCREEN) --- */}
+            {/* FIX: Menggunakan w-0 h-0 overflow-hidden alih-alih 'hidden' agar tetap ter-render di DOM, lalu di-expand saat print */}
+            {/* --- 4. BUTTON CETAK SUDAH DIHANDLE DI DALAM JADWAL (Bagian E) --- */}
+            {/* Div Layout Khusus Cetak dihapus karena sekarang menggunakan PDF Backend */}
+
         </AppLayout>
     );
 }

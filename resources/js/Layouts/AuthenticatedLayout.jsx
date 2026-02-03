@@ -17,11 +17,12 @@ const FormulirIcon = () => (
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
     </svg>
 );
+
 // === KOMPONEN NAVLINK ===
 const NavLink = ({ href, active, children }) => (
     <Link
         href={href}
-        className={`flex items-center px-4 py-3 my-1 rounded-lg transition-colors duration-200 ${ active ? 'bg-alyusra-orange text-white' : 'text-gray-600 hover:bg-gray-200' }`}
+        className={`flex items-center px-4 py-3 my-1 rounded-lg transition-colors duration-200 ${active ? 'bg-alyusra-orange text-white' : 'text-gray-600 hover:bg-gray-200'}`}
     >
         {children}
     </Link>
@@ -29,7 +30,7 @@ const NavLink = ({ href, active, children }) => (
 
 // === DATA MENU NAVIGASI ===
 const navigationMenu = {
-    PSB: [ 
+    PSB: [
         { name: 'Dashboard', href: route('dashboard'), icon: DashboardIcon, current: 'dashboard' },
         { name: 'Data Pendaftar', href: route('psb.pendaftaran.index'), icon: PendaftaranIcon, current: 'psb.pendaftaran.index' },
         { name: 'Manajemen Program', href: route('admin.program.index'), icon: ProgramIcon, current: 'admin.program.*' },
@@ -44,11 +45,10 @@ const navigationMenu = {
         { name: 'Laporan Keuangan', href: route('admin.laporan.index'), icon: KeuanganIcon, current: 'admin.laporan.*' },
         { name: 'Uang Masuk Santri', href: route('admin.uang_masuk.index'), icon: MoneyIcon, current: 'admin.uang_masuk.*' },
         { name: 'SPP', href: route('admin.spp.index'), icon: SppIcon, current: 'admin.spp.*' },
+        { name: 'Daftar Ulang (Tahunan)', href: route('admin.daftar-ulang.index'), icon: MoneyIcon, current: 'admin.daftar-ulang.*' },
         { name: 'Formulir', href: route('admin.keuangan.formulir.index'), icon: FormulirIcon, current: 'admin.keuangan.formulir.*' },
-        
     ],
-    // Hapus 'Pembayaran SPP' dari default list wali_santri
-    // Kita akan tambahkan manual di bawah dengan pengecekan
+    // Default menu wali santri
     wali_santri: [
         { name: 'Dashboard', href: route('dashboard'), icon: DashboardIcon, current: 'dashboard' },
         { name: 'Lihat Status Anak', href: route('wali.status.anak'), icon: StatusLulusIcon, current: 'wali.status.anak' },
@@ -59,14 +59,14 @@ const navigationMenu = {
 export default function Authenticated({ user, header, children }) {
     // 1. Ambil Props Auth dari usePage
     const { auth } = usePage().props;
-    
+
     // 2. Safety Check User (Fallback jika props user tidak langsung dikirim)
     const currentUser = user || auth?.user || { name: 'Guest', role: 'wali_santri' };
     const userRole = currentUser.role ?? 'wali_santri';
-    
+
     // 3. Ambil Status Lunas & Beasiswa dari Middleware
-    const isLunas = auth?.is_uang_masuk_lunas; 
-    const isBeasiswa = auth?.user?.is_beasiswa; // <--- INI PENTING
+    const isLunas = auth?.is_uang_masuk_lunas;
+    const isBeasiswa = auth?.user?.is_beasiswa;
 
     // 4. Logic Menu Dinamis
     // Copy array menu agar tidak memodifikasi original object secara permanen
@@ -76,10 +76,12 @@ export default function Authenticated({ user, header, children }) {
     // Tampilkan menu SPP hanya jika BUKAN Beasiswa
     if (userRole === 'wali_santri' && !isBeasiswa) {
         navLinks.push({
-            name: 'Pembayaran SPP', 
-            href: route('spp.index'), 
-            icon: SppIcon, 
-            current: 'spp.*' 
+            name: 'Pembayaran SPP',
+            // PERBAIKAN: Gunakan 'wali.spp.index' sesuai dengan yang ada di web.php
+            href: route('wali.spp.index'),
+            icon: SppIcon,
+            // PERBAIKAN: Pattern current yang benar
+            current: 'wali.spp.*'
         });
     }
 
@@ -87,15 +89,26 @@ export default function Authenticated({ user, header, children }) {
     // Tampilkan menu ini jika BELUM LUNAS
     if (userRole === 'wali_santri' && !isLunas) {
         navLinks.push({
-            name: 'Tagihan Uang Masuk', 
-            href: route('wali.uang-masuk.index'), 
+            name: 'Tagihan Uang Masuk',
+            href: route('wali.uang-masuk.index'),
             icon: MoneyIcon,
             current: 'wali.uang-masuk.*'
         });
     }
 
+    // [LOGIC 3: DAFTAR ULANG TAHUNAN]
+    // Tampilkan untuk semua Wali Santri (aktif)
+    if (userRole === 'wali_santri') {
+        navLinks.push({
+            name: 'Daftar Ulang Tahunan',
+            href: route('wali.daftar-ulang.index'),
+            icon: MoneyIcon,
+            current: 'wali.daftar-ulang.*'
+        });
+    }
+
     return (
-        <div className="min-h-screen flex bg-gray-100">
+        <div className="h-screen overflow-hidden flex bg-gray-100">
             {/* --- SIDEBAR --- */}
             <aside className="w-64 bg-white shadow-lg flex flex-col hidden md:flex">
                 <div className="flex flex-col items-center p-6 border-b">
@@ -106,7 +119,7 @@ export default function Authenticated({ user, header, children }) {
                         <span className="px-3 py-1 text-xs text-white bg-green-600 rounded-full capitalize">
                             {userRole.replace('_', ' ')}
                         </span>
-                        {/* Label Beasiswa (Opsional, agar terlihat keren) */}
+                        {/* Label Beasiswa (Opsional) */}
                         {isBeasiswa && (
                             <span className="px-3 py-1 text-xs text-white bg-blue-500 rounded-full capitalize">
                                 Beasiswa
@@ -127,8 +140,8 @@ export default function Authenticated({ user, header, children }) {
                 <div className="p-4 border-t bg-gray-50">
                     <Link
                         href={route('logout')}
-                        method="post"  
-                        as="button"     
+                        method="post"
+                        as="button"
                         className="w-full flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition-colors duration-200 text-sm shadow"
                     >
                         <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
@@ -136,10 +149,10 @@ export default function Authenticated({ user, header, children }) {
                     </Link>
                 </div>
             </aside>
-            
+
             {/* --- MAIN CONTENT AREA --- */}
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-                
+
                 {/* Header Mobile & Desktop */}
                 <header className="bg-white shadow px-6 py-4 flex justify-between items-center md:hidden">
                     <div className="font-bold text-lg">RTQ Al-Yusra</div>
