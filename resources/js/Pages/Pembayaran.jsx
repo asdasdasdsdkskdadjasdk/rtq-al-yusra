@@ -1,9 +1,11 @@
 import React, { useEffect } from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import PrimaryButton from '@/Components/PrimaryButton';
 
-export default function Pembayaran({ auth, pendaftar, clientKey, qrCode }) {
+export default function Pembayaran({ auth, pendaftar, qrCode }) {
+    // Ambil configurasi Global
+    const { midtrans } = usePage().props;
 
     // Load Midtrans Snap Script & Embed (Fresh Load Strategy - Strict Cleanup)
     useEffect(() => {
@@ -24,10 +26,16 @@ export default function Pembayaran({ auth, pendaftar, clientKey, qrCode }) {
         cleanupSnap();
 
         // 2. Buat Script Baru
+        // Tentukan URL berdasarkan Environment Backend (Production vs Sandbox)
+        const isProduction = midtrans.is_production === true || midtrans.is_production === 'true' || midtrans.is_production === 1;
+        const snapUrl = isProduction
+            ? "https://app.midtrans.com/snap/snap.js"
+            : "https://app.sandbox.midtrans.com/snap/snap.js";
+
         const script = document.createElement('script');
-        script.src = "https://app.sandbox.midtrans.com/snap/snap.js";
+        script.src = snapUrl;
         script.id = scriptId;
-        script.setAttribute('data-client-key', clientKey);
+        script.setAttribute('data-client-key', midtrans.client_key);
 
         // 3. Fungsi Embed
         const embedSnap = () => {
@@ -72,7 +80,7 @@ export default function Pembayaran({ auth, pendaftar, clientKey, qrCode }) {
             cleanupSnap();
         };
 
-    }, [clientKey, pendaftar.snap_token]);
+    }, [midtrans, pendaftar.snap_token]);
 
     const formatRupiah = (angka) => {
         return new Intl.NumberFormat('id-ID', {

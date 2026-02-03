@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm, Link, router } from '@inertiajs/react';
+import { Head, useForm, Link, router, usePage } from '@inertiajs/react';
 
-export default function WaliDaftarUlangIndex({ auth, history, currentYear, midtrans_client_key }) {
+export default function WaliDaftarUlangIndex({ auth, history, currentYear }) {
+    // Ambil Config dari Global Props (Backend)
+    const { midtrans } = usePage().props;
 
     // Cari tagihan tahun ini
     const currentBill = history.find(h => h.tahun === currentYear);
@@ -18,15 +20,21 @@ export default function WaliDaftarUlangIndex({ auth, history, currentYear, midtr
 
     // --- MIDTRANS SCRIPT LOADER ---
     useEffect(() => {
+        // Tentukan URL berdasarkan Environment Backend (Production vs Sandbox)
+        const isProduction = midtrans.is_production === true || midtrans.is_production === 'true' || midtrans.is_production === 1;
+        const snapUrl = isProduction
+            ? "https://app.midtrans.com/snap/snap.js"
+            : "https://app.sandbox.midtrans.com/snap/snap.js";
+
         const script = document.createElement('script');
-        script.src = "https://app.sandbox.midtrans.com/snap/snap.js"; // Change to production URL if needed or use config
-        script.setAttribute('data-client-key', midtrans_client_key);
+        script.src = snapUrl;
+        script.setAttribute('data-client-key', midtrans.client_key);
         document.body.appendChild(script);
 
         return () => {
             document.body.removeChild(script);
         };
-    }, [midtrans_client_key]);
+    }, [midtrans]);
 
     const submitUpload = (e) => {
         e.preventDefault();

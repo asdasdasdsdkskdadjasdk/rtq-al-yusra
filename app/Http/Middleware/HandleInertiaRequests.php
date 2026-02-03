@@ -266,6 +266,12 @@ class HandleInertiaRequests extends Middleware
                 'unreadCount' => $unreadCount,
             ],
 
+            // --- MIDTRANS GLOBAL CONFIG (Fix Double Personality) ---
+            'midtrans' => [
+                'client_key' => config('services.midtrans.client_key'),
+                'is_production' => config('services.midtrans.is_production'),
+            ],
+
             'sekolah' => $settings,
             'ziggy' => fn () => [ ...(new Ziggy)->toArray(), 'location' => $request->url() ],
             'flash' => [

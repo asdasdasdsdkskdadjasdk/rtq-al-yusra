@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm, router } from '@inertiajs/react';
+import { Head, useForm, router, usePage } from '@inertiajs/react';
 import Modal from '@/Components/Modal';
 
 // Terima props baru: spp_aktif, pesan
-export default function SppIndex({ spp_aktif, pesan, listBulan, nominalSpp, isBeasiswa, midtrans_client_key, tahunDipilih, tahunList }) {
+export default function SppIndex({ spp_aktif, pesan, listBulan, nominalSpp, isBeasiswa, tahunDipilih, tahunList }) {
+    // Ambil Config dari Global Props (Backend)
+    const { midtrans } = usePage().props;
 
     // --- KONDISI: SPP BELUM AKTIF ---
     if (!spp_aktif) {
@@ -43,12 +45,18 @@ export default function SppIndex({ spp_aktif, pesan, listBulan, nominalSpp, isBe
 
     // ... (useEffect Midtrans sama) ...
     useEffect(() => {
+        // Tentukan URL berdasarkan Environment Backend (Production vs Sandbox)
+        const isProduction = midtrans.is_production === true || midtrans.is_production === 'true' || midtrans.is_production === 1;
+        const snapUrl = isProduction
+            ? "https://app.midtrans.com/snap/snap.js"
+            : "https://app.sandbox.midtrans.com/snap/snap.js";
+
         const script = document.createElement('script');
-        script.src = "https://app.sandbox.midtrans.com/snap/snap.js";
-        script.setAttribute('data-client-key', midtrans_client_key);
+        script.src = snapUrl;
+        script.setAttribute('data-client-key', midtrans.client_key);
         document.body.appendChild(script);
         return () => { if (document.body.contains(script)) document.body.removeChild(script); };
-    }, [midtrans_client_key]);
+    }, [midtrans]);
 
     const openPaymentModal = (bulanItem) => {
         setSelectedMonth(bulanItem);

@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import Modal from '@/Components/Modal';
 
-export default function UangMasukWali({ auth, tagihan, midtrans_client_key }) {
+export default function UangMasukWali({ auth, tagihan }) {
+    // Ambil Config dari Global Props (Backend)
+    const { midtrans } = usePage().props;
+
     // Helper Variables
     const sisa = tagihan.total_tagihan - tagihan.sudah_dibayar;
     const persentase = tagihan.total_tagihan > 0
@@ -38,10 +41,15 @@ export default function UangMasukWali({ auth, tagihan, midtrans_client_key }) {
 
     // 1. Load Midtrans Snap JS Script
     useEffect(() => {
+        // Tentukan URL berdasarkan Environment Backend (Production vs Sandbox)
+        const isProduction = midtrans.is_production === true || midtrans.is_production === 'true' || midtrans.is_production === 1;
+        const snapUrl = isProduction
+            ? "https://app.midtrans.com/snap/snap.js"
+            : "https://app.sandbox.midtrans.com/snap/snap.js";
+
         const script = document.createElement('script');
-        // Gunakan URL Sandbox untuk Development. Ganti ke Production URL saat live.
-        script.src = "https://app.sandbox.midtrans.com/snap/snap.js";
-        script.setAttribute('data-client-key', midtrans_client_key);
+        script.src = snapUrl;
+        script.setAttribute('data-client-key', midtrans.client_key);
         document.body.appendChild(script);
 
         return () => {
@@ -49,7 +57,7 @@ export default function UangMasukWali({ auth, tagihan, midtrans_client_key }) {
                 document.body.removeChild(script);
             }
         };
-    }, [midtrans_client_key]);
+    }, [midtrans]);
 
     // 2. Handler Bayar Online (Midtrans)
     const handlePay = async (e) => {
