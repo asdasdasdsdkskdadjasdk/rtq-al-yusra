@@ -379,7 +379,8 @@ class DashboardController extends Controller
                 $baseUrl = config('services.santri_api.base_url');
                 $apiKey  = config('services.santri_api.api_key');
 
-                $response = Http::withHeaders(['X-API-KEY' => $apiKey])->get($baseUrl);
+                // WARNING: using withoutVerifying() to bypass SSL Hostname Mismatch on monitorrtq.my.id
+                $response = Http::withoutVerifying()->withHeaders(['X-API-KEY' => $apiKey])->get($baseUrl);
                 if ($response->successful()) {
                     $allSantri = $response->json();
                     $santri = collect($allSantri)->first(function ($s) use ($user) {
@@ -388,8 +389,8 @@ class DashboardController extends Controller
 
                     if ($santri) {
                         $id = $santri['id'];
-                        $resHafalan = Http::withHeaders(['X-API-KEY' => $apiKey])->get("{$baseUrl}/{$id}/hafalan");
-                        $resAbsensi = Http::withHeaders(['X-API-KEY' => $apiKey])->get("{$baseUrl}/{$id}/kehadiran");
+                        $resHafalan = Http::withoutVerifying()->withHeaders(['X-API-KEY' => $apiKey])->get("{$baseUrl}/{$id}/hafalan");
+                        $resAbsensi = Http::withoutVerifying()->withHeaders(['X-API-KEY' => $apiKey])->get("{$baseUrl}/{$id}/kehadiran");
                         
                         $hafalanData = $resHafalan->json() ?? [];
                         $absensiData = $resAbsensi->json() ?? [];

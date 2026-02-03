@@ -26,7 +26,8 @@ class WaliMuridController extends Controller
         $namaDicari = $user->name;
 
         // 1. Ambil List Santri
-        $response = Http::withHeaders(['X-API-KEY' => $this->apiKey])->get($this->baseUrl);
+        // WARNING: using withoutVerifying() to bypass SSL Hostname Mismatch on monitorrtq.my.id
+        $response = Http::withoutVerifying()->withHeaders(['X-API-KEY' => $this->apiKey])->get($this->baseUrl);
         
         if ($response->failed()) return ['error' => 'Gagal koneksi ke server API (Port 8080).'];
 
@@ -39,8 +40,8 @@ class WaliMuridController extends Controller
 
         // 2. Ambil Detail
         $id = $santri['id'];
-        $resHafalan = Http::withHeaders(['X-API-KEY' => $this->apiKey])->get("{$this->baseUrl}/{$id}/hafalan");
-        $resAbsensi = Http::withHeaders(['X-API-KEY' => $this->apiKey])->get("{$this->baseUrl}/{$id}/kehadiran");
+        $resHafalan = Http::withoutVerifying()->withHeaders(['X-API-KEY' => $this->apiKey])->get("{$this->baseUrl}/{$id}/hafalan");
+        $resAbsensi = Http::withoutVerifying()->withHeaders(['X-API-KEY' => $this->apiKey])->get("{$this->baseUrl}/{$id}/kehadiran");
 
         return [
             'santri' => $santri,

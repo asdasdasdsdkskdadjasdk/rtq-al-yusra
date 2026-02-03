@@ -488,7 +488,8 @@ class FormulirController extends Controller
                 ];
 
                 // Fire & Forget (Log error if fails)
-                $response = Http::withHeaders(['X-API-KEY' => $apiKey])->post($baseUrl, $payload);
+                // WARNING: using withoutVerifying() to bypass SSL Hostname Mismatch on monitorrtq.my.id
+                $response = Http::withoutVerifying()->withHeaders(['X-API-KEY' => $apiKey])->post($baseUrl, $payload);
                 
                 if (!$response->successful()) {
                     Log::error("Failed to sync santri to API. Status: " . $response->status() . " Body: " . $response->body());
