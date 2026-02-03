@@ -44,7 +44,7 @@ return [
     ],
 
     'santri_api' => [
-        'base_url' => env('SANTRI_API_BASE_URL', 'http://127.0.0.1:8080/api/v1/santri'),
+        'base_url' => env('SANTRI_API_BASE_URL', 'https://monitorrtq.my.id/api/v1/santri'),
         'api_key' => env('SANTRI_API_KEY', 'RTQALYUSRA-RAHASIA-2025-YANG-SULIT-DITEBAK'),
     ],
 

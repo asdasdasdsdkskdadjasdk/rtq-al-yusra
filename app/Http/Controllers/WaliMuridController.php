@@ -10,9 +10,15 @@ use Carbon\Carbon;
 
 class WaliMuridController extends Controller
 {
-    // --- KONFIGURASI API ---
-    private $baseUrl = 'http://127.0.0.1:8080/api/v1/santri';
-    private $apiKey  = 'RTQALYUSRA-RAHASIA-2025-YANG-SULIT-DITEBAK';
+    // --- KONFIGURASI API (Refactored to Config) ---
+    private $baseUrl;
+    private $apiKey;
+
+    public function __construct()
+    {
+        $this->baseUrl = config('services.santri_api.base_url');
+        $this->apiKey  = config('services.santri_api.api_key');
+    }
 
     // Helper untuk ambil data mentah dari API
     private function fetchData() {
