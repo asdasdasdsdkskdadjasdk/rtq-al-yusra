@@ -49,6 +49,7 @@ jobs:
             node_modules/**
             tests/**
             storage/*.key
+            vendor/**
 
       # 5. Eksekusi Command Laravel & Symlink (Via SSH)
       - name: 🚀 Run Artisan & Link Public
@@ -60,6 +61,11 @@ jobs:
           script: |
             # Pindah ke folder projek
             cd rtq_al_yusra
+            
+            export PHP_PATH=/opt/cpanel/ea-php83/root/usr/bin/php
+            
+            # Perintah Install Vendor di Server (Cepat & Stabil)
+            /opt/cpanel/composer/bin/composer install --no-dev --optimize-autoloader
             
             # Migrate Database
             php artisan migrate --force
