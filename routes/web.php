@@ -210,5 +210,8 @@ Route::middleware('auth')->group(function () {
     })->name('notifications.read');
 });
 
+// --- AUTH ROUTES ---
+require __DIR__.'/auth.php';
+
 // --- DEBUG ROUTE (HAPUS NANTI) ---
 require __DIR__.'/debug_api.php';
