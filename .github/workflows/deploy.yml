@@ -42,7 +42,7 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: /laravel_app/    
+          server-dir: /rtq_al_yusra/    
           exclude: |
             **/.git*
             **/.git*/**
@@ -59,7 +59,7 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           script: |
             # Pindah ke folder projek
-            cd laravel_app
+            cd rtq_al_yusra
             
             # Migrate Database
             php artisan migrate --force
@@ -75,6 +75,6 @@ jobs:
                 # Backup folder public_html lama (jika bukan link)
                 mv public_html public_html_backup_old
                 # Buat link baru
-                ln -s ~/laravel_app/public ~/public_html
+                ln -s ~/rtq_al_yusra/public ~/public_html
                 echo "Symlink created!"
             fi
