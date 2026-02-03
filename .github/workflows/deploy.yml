@@ -1,0 +1,80 @@
+name: Deploy Laravel React to Rumahweb
+
+on:
+  push:
+    branches:
+      - main  # PASTIKAN: Cek di GitHub Anda, apakah nama branchnya 'main' atau 'master'?
+
+jobs:
+  web-deploy:
+    name: 🚀 Deploy to Hosting
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Ambil codingan terbaru
+      - name: 🚚 Get latest code
+        uses: actions/checkout@v4
+
+      # 2. Setup PHP & Install Composer (Backend)
+      - name: ⚡ Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2' # PASTIKAN: Versi PHP di cPanel juga harus 8.2
+          extensions: mbstring, intl, pdo, pdo_mysql
+
+      - name: 📦 Install Composer Dependencies
+        run: composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+
+      # 3. Setup Node.js & Build React (Frontend)
+      - name: ⚡ Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: 🔨 Build React Assets
+        run: |
+          npm ci
+          npm run build
+
+      # 4. Upload File ke Hosting
+      - name: 📂 Sync files via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: /laravel_app/    
+          exclude: |
+            **/.git*
+            **/.git*/**
+            node_modules/**
+            tests/**
+            storage/*.key
+
+      # 5. Eksekusi Command Laravel & Symlink (Via SSH)
+      - name: 🚀 Run Artisan & Link Public
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          script: |
+            # Pindah ke folder projek
+            cd laravel_app
+            
+            # Migrate Database
+            php artisan migrate --force
+            
+            # Optimasi Cache
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            
+            # LINKING FOLDER (Agar public folder Laravel tampil di domain utama)
+            cd ~
+            if [ -d "public_html" ] && [ ! -L "public_html" ]; then
+                # Backup folder public_html lama (jika bukan link)
+                mv public_html public_html_backup_old
+                # Buat link baru
+                ln -s ~/laravel_app/public ~/public_html
+                echo "Symlink created!"
+            fi
