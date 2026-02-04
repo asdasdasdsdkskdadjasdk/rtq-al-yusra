@@ -86,6 +86,7 @@ export default function Edit({ auth, pendaftar, programs, cabangs }) {
                             <option value="Sudah Diverifikasi">Sudah Diverifikasi</option>
                             <option value="Menunggu Hasil Pendaftaran">Menunggu Hasil Pendaftaran</option>
                             <option value="Lulus">Lulus</option>
+                            <option value="Sudah Daftar Ulang">Sudah Daftar Ulang</option>
                             <option value="Tidak Lulus">Tidak Lulus</option>
                         </select>
                     </div>
