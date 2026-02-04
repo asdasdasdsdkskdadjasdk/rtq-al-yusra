@@ -67,7 +67,7 @@ class WaliMuridController extends Controller
             'Hadir' => collect($absensiData)->where('status_kehadiran', 'Hadir')->count(),
             'Sakit' => collect($absensiData)->where('status_kehadiran', 'Sakit')->count(),
             'Izin'  => collect($absensiData)->where('status_kehadiran', 'Izin')->count(),
-            'Alpha' => collect($absensiData)->where('status_kehadiran', 'Alpha')->count(),
+            'Alpha' => collect($absensiData)->filter(function($i) { return in_array($i['status_kehadiran'], ['Alpha', 'Alfa']); })->count(),
         ];
 
         // Logic Progress Hafalan
@@ -109,7 +109,7 @@ class WaliMuridController extends Controller
             'Hadir' => $kehadiranFiltered->where('status_kehadiran', 'Hadir')->count(),
             'Sakit' => $kehadiranFiltered->where('status_kehadiran', 'Sakit')->count(),
             'Izin'  => $kehadiranFiltered->where('status_kehadiran', 'Izin')->count(),
-            'Alpha' => $kehadiranFiltered->where('status_kehadiran', 'Alpha')->count(),
+            'Alpha' => $kehadiranFiltered->filter(function($i) { return in_array($i['status_kehadiran'], ['Alpha', 'Alfa']); })->count(),
         ];
 
         // 2. Filter Hafalan

@@ -408,7 +408,7 @@ class DashboardController extends Controller
                                 'Hadir' => $absensiBulanIni->where('status_kehadiran', 'Hadir')->count(),
                                 'Sakit' => $absensiBulanIni->where('status_kehadiran', 'Sakit')->count(),
                                 'Izin'  => $absensiBulanIni->where('status_kehadiran', 'Izin')->count(),
-                                'Alpha' => $absensiBulanIni->where('status_kehadiran', 'Alpha')->count(),
+                                'Alpha' => $absensiBulanIni->filter(fn($i) => in_array($i['status_kehadiran'], ['Alpha', 'Alfa']))->count(),
                             ],
                             'setoranTerakhir' => collect($hafalanData)->sortByDesc('tanggal')->first(),
                             'progressHafalan' => [
